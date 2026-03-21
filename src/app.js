@@ -9,6 +9,20 @@ import equipmentRoutes from './routes/equipmentRoutes.js';
 import authenticateToken from './middlewares/authMiddleware.js'; // Подключаем middleware для авторизации
 
 // Настройка middleware
+app.use((req, res, next) => {
+    const allowedOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+    res.header('Access-Control-Allow-Origin', allowedOrigin);
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Credentials', 'true');
+
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
+
+    return next();
+});
+
 app.use(express.json()); // Для парсинга JSON в теле запросов
 
 // Подключаем маршруты

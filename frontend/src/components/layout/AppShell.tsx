@@ -2,24 +2,27 @@ import { PropsWithChildren, useMemo } from 'react';
 import { Activity, Cable, ChartColumn, Cpu, LayoutDashboard, LogOut, Map, ShieldCheck, SquareStack, Unplug } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth-store';
+import { useI18n } from '../../i18n/provider';
 import { Button } from '../common/Button';
+import { LanguageSwitcher } from '../common/LanguageSwitcher';
 import { cn } from '../../utils/cn';
-
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/equipment', label: 'Equipment', icon: Cpu },
-  { to: '/ups', label: 'UPS', icon: ShieldCheck },
-  { to: '/switch-cabinets', label: 'Switch Cabinets', icon: SquareStack },
-  { to: '/zones', label: 'Zones', icon: Map },
-  { to: '/connections', label: 'Connections', icon: Activity },
-  { to: '/cables', label: 'Cables', icon: Cable },
-  { to: '/reports', label: 'Reports', icon: ChartColumn }
-];
 
 export function AppShell({ children }: PropsWithChildren) {
   const { user, logout } = useAuthStore();
+  const { t } = useI18n();
   const role = user?.role ?? 'user';
-  const quickSearchPlaceholder = useMemo(() => 'Search equipment, serial, rack or zone…', []);
+  const quickSearchPlaceholder = useMemo(() => t('app.searchPlaceholder'), [t]);
+
+  const navItems = [
+    { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { to: '/equipment', label: t('nav.equipment'), icon: Cpu },
+    { to: '/ups', label: t('nav.ups'), icon: ShieldCheck },
+    { to: '/switch-cabinets', label: t('nav.switchCabinets'), icon: SquareStack },
+    { to: '/zones', label: t('nav.zones'), icon: Map },
+    { to: '/connections', label: t('nav.connections'), icon: Activity },
+    { to: '/cables', label: t('nav.cables'), icon: Cable },
+    { to: '/reports', label: t('nav.reports'), icon: ChartColumn }
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -45,16 +48,17 @@ export function AppShell({ children }: PropsWithChildren) {
           <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-6 py-4 backdrop-blur">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">Enterprise workspace</p>
-                <h2 className="text-xl font-semibold">Data Center Infrastructure API</h2>
+                <p className="text-sm font-medium text-slate-500">{t('app.enterpriseWorkspace')}</p>
+                <h2 className="text-xl font-semibold">{t('app.title')}</h2>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <LanguageSwitcher />
                 <input className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100 sm:w-80" placeholder={quickSearchPlaceholder} />
                 <div className="rounded-xl border border-slate-200 px-4 py-2 text-sm">
                   <p className="font-medium text-slate-900">{user?.username ?? 'demo_user'}</p>
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{role}</p>
                 </div>
-                <Button variant="secondary" icon={<LogOut className="h-4 w-4" />} onClick={logout}>Logout</Button>
+                <Button variant="secondary" icon={<LogOut className="h-4 w-4" />} onClick={logout}>{t('app.logout')}</Button>
               </div>
             </div>
           </header>

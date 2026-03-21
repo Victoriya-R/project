@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
+import { useI18n } from '../../i18n/provider';
 import { Equipment, SwitchCabinet, Zone } from '../../types/entities';
 import { StatusBadge } from '../../components/common/StatusBadge';
 
 export function ZoneNavigator({ zones, cabinets, equipment }: { zones: Zone[]; cabinets: SwitchCabinet[]; equipment: Equipment[] }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-4">
       {zones.map((zone) => {
@@ -11,11 +13,11 @@ export function ZoneNavigator({ zones, cabinets, equipment }: { zones: Zone[]; c
           <div key={zone.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Zone</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{t('nav.zones')}</p>
                 <h3 className="text-lg font-semibold text-slate-900">{zone.name}</h3>
                 <p className="mt-1 text-sm text-slate-500">{zone.description}</p>
               </div>
-              <Link to={`/zones/${zone.id}`} className="text-sm font-medium text-brand-600">Open zone</Link>
+              <Link to={`/zones/${zone.id}`} className="text-sm font-medium text-brand-600">{t('zones.openZone')}</Link>
             </div>
             <div className="mt-4 grid gap-4 xl:grid-cols-2">
               {zoneCabinets.map((cabinet) => {
@@ -25,9 +27,9 @@ export function ZoneNavigator({ zones, cabinets, equipment }: { zones: Zone[]; c
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="font-semibold text-slate-900">{cabinet.name}</p>
-                        <p className="text-xs text-slate-500">{items.length} assets in rack</p>
+                        <p className="text-xs text-slate-500">{t('zones.assetsInRack', { count: items.length })}</p>
                       </div>
-                      <Link to={`/switch-cabinets/${cabinet.id}`} className="text-sm font-medium text-brand-600">Rack view</Link>
+                      <Link to={`/switch-cabinets/${cabinet.id}`} className="text-sm font-medium text-brand-600">{t('zones.rackView')}</Link>
                     </div>
                     <div className="mt-4 space-y-2">
                       {items.map((item) => (

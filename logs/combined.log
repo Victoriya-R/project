@@ -1,0 +1,130 @@
+2026-01-30T13:08:00.143Z error: Error: Failed to insert user into database. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: users.role_id
+2026-01-30T13:08:43.014Z error: Error: Failed to insert user into database. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: users.role_id
+2026-01-30T13:09:06.129Z error: Error: Failed to insert user into database. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: users.role_id
+2026-01-30T13:10:30.761Z error: Error: Failed to insert user into database. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: users.role_id
+2026-01-30T13:16:25.542Z error: Error: Failed to insert user into database. Error: SQLITE_BUSY: database is locked
+2026-02-04T13:05:58.349Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:06:11.828Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:06:35.425Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:06:36.739Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:06:53.484Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:06:54.252Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:07:00.201Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:08:05.976Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:12:03.466Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:12:19.678Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:12:37.506Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:15:23.927Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T13:15:37.315Z error: Error: Failed to create equipment. Error: SQLITE_CONSTRAINT: NOT NULL constraint failed: assets.model
+2026-02-04T14:10:30.753Z info: Success: Zone created with ID: 1, Name: Помещение
+2026-02-04T14:11:22.245Z info: Success: Zone created with ID: 2, Name: Помещение
+2026-02-04T14:14:01.501Z info: Success: Zone created with ID: 3, Name: Помещение
+2026-02-04T14:15:46.563Z info: Success: SwitchCabinet created with ID: 1, Name: Сервер, Serial Number: SN123456789
+2026-02-04T14:16:46.988Z info: Success: SwitchCabinet created with ID: 2, Name: Сервер, Serial Number: SN123456789
+2026-02-04T14:20:26.781Z info: Success: SwitchCabinet created with ID: 3, Name: Сервер, Serial Number: SN123456789
+2026-02-04T14:22:35.754Z info: Success: SwitchCabinet created with ID: 4, Name: Сервер, Serial Number: SN123456789
+2026-02-04T14:22:55.227Z info: Success: SwitchCabinet created with ID: 5, Name: Сервер, Serial Number: SN123456789
+2026-03-20T13:01:57.760Z info: Success: Cable created with ID: 1, Type: patchCord, Length: 2, Status: active
+2026-03-20T13:14:32.266Z info: Success: Cable created with ID: 2, Type: patchCord, Length: 4, Status: active
+2026-03-20T13:27:42.545Z info: Success: Cable created with ID: 3, Type: powerCable, Length: 2, Status: active
+2026-03-21T10:35:29.007Z info: Success: Zone created with ID: 4, Name: Помещение 1
+2026-03-21T10:36:35.391Z info: Success: Fetched 4 zones
+2026-03-21T10:37:44.703Z info: Success: Zone created with ID: 5, Name: Помещение 2
+2026-03-21T10:37:51.854Z info: Success: Zone created with ID: 6, Name: Помещение 3
+2026-03-21T10:37:57.480Z info: Success: Zone created with ID: 7, Name: Помещение 4
+2026-03-21T10:38:55.985Z info: Success: Zone created with ID: 8, Name: Офис 1
+2026-03-21T10:39:03.346Z info: Success: Zone created with ID: 9, Name: Офис 2
+2026-03-21T10:39:08.862Z info: Success: Zone created with ID: 10, Name: Офис 3
+2026-03-21T10:40:08.467Z info: Success: Zone created with ID: 11, Name: Серверная
+2026-03-21T10:40:44.808Z info: Success: Zone created with ID: 12, Name: Серверная 2
+2026-03-21T10:40:50.360Z info: Success: Zone created with ID: 13, Name: Серверная 3
+2026-03-21T10:42:28.139Z info: Success: Zone created with ID: 14, Name: Электрощитовая 1
+2026-03-21T10:42:33.674Z info: Success: Zone created with ID: 15, Name: Электрощитовая 2
+2026-03-21T10:42:39.390Z info: Success: Zone created with ID: 16, Name: Электрощитовая 3
+2026-03-21T10:43:20.944Z info: Success: Zone created with ID: 17, Name: Климатический комплекс 1
+2026-03-21T10:43:26.579Z info: Success: Zone created with ID: 18, Name: Климатический комплекс 2
+2026-03-21T10:43:31.211Z info: Success: Zone created with ID: 19, Name: Климатический комплекс 3
+2026-03-21T10:43:41.055Z info: Success: Zone created with ID: 20, Name: Климатический комплекс 4
+2026-03-21T10:48:08.620Z info: Success: Zone created with ID: 21, Name: Стойки Электрощит 1
+2026-03-21T10:48:13.426Z info: Success: Zone created with ID: 22, Name: Стойки Электрощит 2
+2026-03-21T10:48:17.863Z info: Success: Zone created with ID: 23, Name: Стойки Электрощит 3
+2026-03-21T10:49:28.158Z info: Success: Zone created with ID: 24, Name: Пом.1
+2026-03-21T10:49:34.096Z info: Success: Zone created with ID: 25, Name: Пом.2
+2026-03-21T10:49:39.852Z info: Success: Zone created with ID: 26, Name: Пом.3
+2026-03-21T10:49:49.618Z info: Success: Zone created with ID: 27, Name: Пом.4
+2026-03-21T10:50:48.482Z info: Success: Zone created with ID: 28, Name: Центр продаж
+2026-03-21T10:56:40.884Z info: Success: Fetched 28 zones
+2026-03-21T10:59:41.084Z info: Success: Zone created with ID: 29, Name: Офис продаж Серверов и СХД
+2026-03-21T11:00:01.862Z info: Success: Fetched 29 zones
+2026-03-21T11:02:05.378Z info: Success: SwitchCabinet created with ID: 6, Name: Стойка Rittal-42
+2026-03-21T11:02:13.551Z info: Success: SwitchCabinet created with ID: 7, Name: Стойка Rittal-42
+2026-03-21T11:02:14.485Z info: Success: SwitchCabinet created with ID: 8, Name: Стойка Rittal-42
+2026-03-21T11:02:15.345Z info: Success: SwitchCabinet created with ID: 9, Name: Стойка Rittal-42
+2026-03-21T11:02:16.214Z info: Success: SwitchCabinet created with ID: 10, Name: Стойка Rittal-42
+2026-03-21T11:02:24.028Z info: Success: SwitchCabinet created with ID: 11, Name: Стойка Rittal-47
+2026-03-21T11:02:24.844Z info: Success: SwitchCabinet created with ID: 12, Name: Стойка Rittal-47
+2026-03-21T11:02:25.602Z info: Success: SwitchCabinet created with ID: 13, Name: Стойка Rittal-47
+2026-03-21T11:02:26.419Z info: Success: SwitchCabinet created with ID: 14, Name: Стойка Rittal-47
+2026-03-21T11:02:27.293Z info: Success: SwitchCabinet created with ID: 15, Name: Стойка Rittal-47
+2026-03-21T11:02:56.231Z info: Success: SwitchCabinet created with ID: 16, Name: Стойка Rittal-48
+2026-03-21T11:02:57.241Z info: Success: SwitchCabinet created with ID: 17, Name: Стойка Rittal-48
+2026-03-21T11:02:58.143Z info: Success: SwitchCabinet created with ID: 18, Name: Стойка Rittal-48
+2026-03-21T11:03:08.511Z info: Success: SwitchCabinet created with ID: 19, Name: Стойка Rittal-48
+2026-03-21T11:03:09.343Z info: Success: SwitchCabinet created with ID: 20, Name: Стойка Rittal-48
+2026-03-21T11:03:10.255Z info: Success: SwitchCabinet created with ID: 21, Name: Стойка Rittal-48
+2026-03-21T11:03:11.678Z info: Success: SwitchCabinet created with ID: 22, Name: Стойка Rittal-48
+2026-03-21T11:03:32.828Z info: Success: SwitchCabinet created with ID: 23, Name: Стойка Rittal-30
+2026-03-21T11:03:35.391Z info: Success: SwitchCabinet created with ID: 24, Name: Стойка Rittal-30
+2026-03-21T11:03:36.306Z info: Success: SwitchCabinet created with ID: 25, Name: Стойка Rittal-30
+2026-03-21T11:05:28.479Z info: Success: SwitchCabinet created with ID: 26, Name: Коммутационный шкаф 
+2026-03-21T11:05:29.779Z info: Success: SwitchCabinet created with ID: 27, Name: Коммутационный шкаф 
+2026-03-21T11:05:30.944Z info: Success: SwitchCabinet created with ID: 28, Name: Коммутационный шкаф 
+2026-03-21T11:05:32.767Z info: Success: SwitchCabinet created with ID: 29, Name: Коммутационный шкаф 
+2026-03-21T11:05:38.692Z info: Success: SwitchCabinet created with ID: 30, Name: Коммутационный шкаф 
+2026-03-21T11:06:26.462Z info: Success: SwitchCabinet created with ID: 31, Name: Коммутационный шкаф 
+2026-03-21T11:06:27.271Z info: Success: SwitchCabinet created with ID: 32, Name: Коммутационный шкаф 
+2026-03-21T11:06:28.057Z info: Success: SwitchCabinet created with ID: 33, Name: Коммутационный шкаф 
+2026-03-21T11:06:28.908Z info: Success: SwitchCabinet created with ID: 34, Name: Коммутационный шкаф 
+2026-03-21T11:07:07.659Z info: Success: SwitchCabinet created with ID: 35, Name: Климатический комплекс 
+2026-03-21T11:07:09.466Z info: Success: SwitchCabinet created with ID: 36, Name: Климатический комплекс 
+2026-03-21T11:07:43.399Z info: Success: SwitchCabinet created with ID: 37, Name: Климатический комплекс 
+2026-03-21T11:11:43.036Z info: Success: SwitchCabinet created with ID: 38, Name: Электрощит PowerMag
+2026-03-21T11:11:48.165Z info: Success: SwitchCabinet created with ID: 39, Name: Электрощит PowerMag
+2026-03-21T11:12:17.405Z info: Success: SwitchCabinet created with ID: 40, Name: Электрощит PowerMag
+2026-03-21T11:22:58.337Z error: Error: Failed to fetch switch cabinet. Error: SQLITE_ERROR: no such column: weight
+2026-03-21T11:23:08.168Z error: Error: Failed to fetch switch cabinet. Error: SQLITE_ERROR: no such column: weight
+2026-03-21T11:39:07.071Z error: Error: Failed to fetch switch cabinet. Error: SQLITE_ERROR: no such column: weight
+2026-03-21T11:39:19.187Z error: Error: Failed to fetch switch cabinet. Error: SQLITE_ERROR: no such column: weight
+2026-03-21T11:39:37.174Z error: Error: Failed to fetch switch cabinet. Error: SQLITE_ERROR: no such column: weight
+2026-03-21T11:41:14.553Z info: Success: Fetched 40 switch cabinets
+2026-03-21T11:46:32.515Z error: Error: Failed to fetch switch cabinet. Error: SQLITE_ERROR: no such column: weight
+2026-03-21T11:46:44.449Z error: Error: Failed to fetch switch cabinet. Error: SQLITE_ERROR: no such column: weight
+2026-03-21T11:47:01.022Z error: Error: Failed to fetch switch cabinet. Error: SQLITE_ERROR: no such column: weight
+2026-03-21T11:48:04.118Z error: Error: Failed to fetch switch cabinet. Error: SQLITE_ERROR: no such column: weight
+2026-03-21T11:56:47.115Z info: Success: Fetched 40 switch cabinets
+2026-03-21T12:52:59.219Z info: Success: Equipment created with ID: 3, Name: Сервер Dell R740, Type: server
+2026-03-21T12:52:59.221Z error: Error: Failed to create equipment. Error: SQLITE_ERROR: no such table: servers
+2026-03-21T12:59:39.344Z info: Success: Equipment created with ID: 3, Name: Сервер Dell R740, Type: server
+2026-03-21T12:59:39.346Z info: Server data created for Equipment ID: 3
+2026-03-21T13:00:36.335Z info: Success: Equipment created with ID: 4, Name: Патч-панель 24 порта, Type: patchPanel
+2026-03-21T13:00:36.336Z info: Patch panel data created for Equipment ID: 4
+2026-03-21T14:54:32.681Z info: Success: Fetched 40 switch cabinets
+2026-03-21T15:26:57.589Z info: Success: Fetched 4 equipment
+2026-03-21T15:50:25.193Z info: Equipment ID: 3 placed in Switch Cabinet ID: 25
+2026-03-21T16:10:29.920Z info: Success: Fetched 29 zones
+2026-03-21T16:11:45.931Z info: Success: Zone with ID: 1 deleted
+2026-03-21T16:11:55.675Z info: Success: Fetched 28 zones
+2026-03-21T16:12:54.775Z info: Success: SwitchCabinet created with ID: 41, Name: Электрощит PowerMag
+2026-03-21T16:17:16.359Z info: Success: Cable created with ID: 4, Type: patchCord, Length: 1, Status: active
+2026-03-21T16:32:34.131Z info: Success: Fetched 0 connections
+2026-03-21T17:00:27.252Z info: Success: Fetched 0 connections
+2026-03-21T17:14:42.494Z error: Error: Failed to create UPS. Error: SQLITE_BUSY: database is locked
+2026-03-21T17:14:56.381Z info: Success: UPS created with ID: 5, Name: UPS-123, Status: available
+2026-03-21T17:14:56.386Z info: UPS data created for Equipment ID: 5
+2026-03-21T17:31:03.375Z error: Error: Failed to fetch ports for UPS with equipment_id: 5. Error: SQLITE_ERROR: no such column: equipment_type
+2026-03-21T17:36:40.410Z info: Success: UPS created with ID: 6, Name: UPS-12666783, Status: available
+2026-03-21T17:36:40.412Z error: Error: Failed to create UPS. Error: SQLITE_ERROR: table ports has no column named equipment_type
+2026-03-21T17:41:42.997Z info: Success: UPS created with ID: 6, Name: UPS-12666783, Status: available
+2026-03-21T17:41:43.013Z info: UPS data created for Equipment ID: 6
+2026-03-21T17:46:14.118Z info: Success: UPS created with ID: 7, Name: UPS-12643333, Status: available
+2026-03-21T17:46:14.131Z info: UPS data created for Equipment ID: 7

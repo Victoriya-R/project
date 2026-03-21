@@ -1,0 +1,14 @@
+2026-01-26T15:40:37.143Z [info] : Server running on port 3000
+2026-01-26T15:45:18.652Z [error] : Error: Failed to fetch equipment. Error: SQLITE_ERROR: no such table: assets
+2026-01-26T15:45:37.956Z [info] : Request: Creating new equipment: string, type: string, model: string, status: string
+2026-01-26T15:45:37.957Z [error] : Error: Failed to create equipment. Error: SQLITE_ERROR: no such table: assets
+2026-01-26T15:45:42.690Z [info] : Request: Creating new equipment: string, type: string, model: string, status: string
+2026-01-26T15:45:42.692Z [error] : Error: Failed to create equipment. Error: SQLITE_ERROR: no such table: assets
+2026-01-26T16:03:10.926Z [info] : Success: Fetched 0 equipment
+2026-01-26T16:03:22.026Z [info] : Success: Fetched 0 equipment
+2026-01-26T16:03:28.909Z [info] : Request: Creating new equipment: string, type: string, model: string, status: string
+2026-01-26T16:03:28.928Z [info] : Success: Equipment created successfully, ID: 1
+2026-01-26T16:03:30.558Z [info] : Request: Creating new equipment: string, type: string, model: string, status: string
+2026-01-26T16:03:30.568Z [info] : Success: Equipment created successfully, ID: 2
+2026-01-26T16:03:41.878Z [info] : Success: Fetched 2 equipment
+2026-01-26T16:15:23.303Z [info] : Server running on port 3000

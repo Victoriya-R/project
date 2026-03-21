@@ -1,0 +1,3 @@
+2026-01-26T15:45:18.652Z [error] : Error: Failed to fetch equipment. Error: SQLITE_ERROR: no such table: assets
+2026-01-26T15:45:37.957Z [error] : Error: Failed to create equipment. Error: SQLITE_ERROR: no such table: assets
+2026-01-26T15:45:42.692Z [error] : Error: Failed to create equipment. Error: SQLITE_ERROR: no such table: assets

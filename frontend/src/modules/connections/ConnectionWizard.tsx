@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useI18n } from '../../i18n/provider';
 import { Cable, Equipment, Port, UpsEntity } from '../../types/entities';
 import { Button } from '../../components/common/Button';
 import { FormField, SelectInput } from '../../components/common/FormField';
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export function ConnectionWizard({ cables, equipment, upsItems, portsMap }: Props) {
+
+  const { t } = useI18n();
   const [cableId, setCableId] = useState<number | ''>('');
   const [sourceId, setSourceId] = useState<number | ''>('');
   const [targetId, setTargetId] = useState<number | ''>('');
@@ -27,56 +30,57 @@ export function ConnectionWizard({ cables, equipment, upsItems, portsMap }: Prop
   };
 
   const errors = [] as string[];
-  if (sourceId && targetId && Number(sourceId) === Number(targetId)) errors.push('Выберите два разных устройства для соединения.');
-  if (sourcePortId && targetPortId && Number(sourcePortId) === Number(targetPortId)) errors.push('Нельзя соединить порт сам с собой.');
-  if (cable && !compatiblePortType) errors.push('Для выбранного кабеля не удалось определить тип совместимых портов.');
+  if (sourceId && targetId && Number(sourceId) === Number(targetId)) errors.push(t('connections.error.sameDevice'));
+  if (sourcePortId && targetPortId && Number(sourcePortId) === Number(targetPortId)) errors.push(t('connections.error.samePort'));
+  if (cable && !compatiblePortType) errors.push(t('connections.error.cableType'));
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">Connection creation flow</h3>
-          <p className="mt-1 text-sm text-slate-500">Кабель → устройство A → порт A → устройство B → порт B. UI показывает только совместимые свободные порты.</p>
+          <h3 className="text-lg font-semibold text-slate-900">{t('connections.wizardTitle')}</h3>
+          <p className="mt-1 text-sm text-slate-500">{t('connections.wizardDesc')}</p>
         </div>
-        <Button variant="secondary">Save draft</Button>
+        <Button variant="secondary">{t('common.saveDraft')}</Button>
       </div>
       <div className="grid gap-4 lg:grid-cols-5">
-        <FormField label="1. Cable">
+        <FormField label={t('connections.step.cable')}>
           <SelectInput value={cableId} onChange={(e) => setCableId(e.target.value ? Number(e.target.value) : '')}>
-            <option value="">Select cable</option>
+            <option value="">{t('connections.selectCable')}</option>
             {cables.map((item) => <option key={item.id} value={item.id}>{item.type} · {item.length}m</option>)}
           </SelectInput>
         </FormField>
-        <FormField label="2. Device A">
+        <FormField label={t('connections.step.deviceA')}>
           <SelectInput value={sourceId} onChange={(e) => { setSourceId(e.target.value ? Number(e.target.value) : ''); setSourcePortId(''); }}>
-            <option value="">Select device</option>
+            <option value="">{t('connections.selectDevice')}</option>
             {deviceOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </SelectInput>
         </FormField>
-        <FormField label="3. Port A" hint={compatiblePortType ? `Showing ${compatiblePortType} ports only` : 'Select cable first'}>
+        <FormField label={t('connections.step.portA')} hint={compatiblePortType ? t('connections.portHint', { type: compatiblePortType }) : t('connections.selectCableHint')}>
           <SelectInput value={sourcePortId} onChange={(e) => setSourcePortId(e.target.value ? Number(e.target.value) : '')}>
-            <option value="">Select port</option>
-            {compatiblePorts(sourceId).map((port) => <option key={port.id} value={port.id}>Port {port.port_number} · {port.status}</option>)}
+            <option value="">{t('connections.selectPort')}</option>
+            {compatiblePorts(sourceId).map((port) => <option key={port.id} value={port.id}>{t('ports.port', { number: port.port_number })} · {t(`ports.${port.status}` as const)}</option>)}
           </SelectInput>
         </FormField>
-        <FormField label="4. Device B">
+        <FormField label={t('connections.step.deviceB')}>
           <SelectInput value={targetId} onChange={(e) => { setTargetId(e.target.value ? Number(e.target.value) : ''); setTargetPortId(''); }}>
-            <option value="">Select device</option>
+            <option value="">{t('connections.selectDevice')}</option>
             {deviceOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </SelectInput>
         </FormField>
-        <FormField label="5. Port B">
+        <FormField label={t('connections.step.portB')}>
           <SelectInput value={targetPortId} onChange={(e) => setTargetPortId(e.target.value ? Number(e.target.value) : '')}>
-            <option value="">Select port</option>
-            {compatiblePorts(targetId).map((port) => <option key={port.id} value={port.id}>Port {port.port_number} · {port.status}</option>)}
+            <option value="">{t('connections.selectPort')}</option>
+            {compatiblePorts(targetId).map((port) => <option key={port.id} value={port.id}>{t('ports.port', { number: port.port_number })} · {t(`ports.${port.status}` as const)}</option>)}
+
           </SelectInput>
         </FormField>
       </div>
       <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-        <p className="font-medium text-slate-900">Validation</p>
+        <p className="font-medium text-slate-900">{t('connections.validation')}</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>{cable ? `Cable ${cable.type} selected; compatible port type: ${compatiblePortType}.` : 'Выберите кабель, чтобы отфильтровать совместимые порты.'}</li>
-          <li>{sourcePortId && targetPortId ? 'Оба порта выбраны. Готово к отправке в API.' : 'Выберите оба порта для завершения сценария.'}</li>
+          <li>{cable ? t('connections.validationCable', { type: cable.type, portType: compatiblePortType }) : t('connections.validationChooseCable')}</li>
+          <li>{sourcePortId && targetPortId ? t('connections.validationReady') : t('connections.validationNeedPorts')}</li>
         </ul>
         {errors.length ? <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700">{errors.map((error) => <p key={error}>{error}</p>)}</div> : null}
       </div>

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
@@ -10,7 +11,6 @@ import { MockBanner } from '../components/common/MockBanner';
 import { PageHeader } from '../components/common/PageHeader';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useApiQuery } from '../hooks/useApiQuery';
-import { ConnectionsTopology } from '../modules/connections/ConnectionsTopology';
 import { ConnectionWizard } from '../modules/connections/ConnectionWizard';
 import { buildDeviceOptions, overlayConnectionStatuses, resolveConnectionRows } from '../modules/connections/utils';
 import { cablesApi, connectionsApi, equipmentApi, upsApi } from '../services/api/client';
@@ -153,7 +153,7 @@ export function ConnectionsPage() {
 
       <DataTable
         columns={[
-          { key: 'id', header: t('connections.connection'), render: (row) => `#${row.id}` },
+          { key: 'id', header: t('connections.connection'), render: (row) => <Link className="font-semibold text-brand-700 hover:text-brand-800" to={`/connections/${row.id}`}>#{row.id}</Link> },
           { key: 'cable', header: t('connections.cable'), render: (row) => row.cableLabel },
           { key: 'devices', header: t('connections.devices'), render: (row) => `${row.sourceDeviceName} ↔ ${row.targetDeviceName}` },
           { key: 'a', header: t('connections.portA'), render: (row) => `${row.sourceDeviceName} · ${row.sourcePortLabel}` },
@@ -167,6 +167,9 @@ export function ConnectionsPage() {
                 <Button variant="ghost" icon={<Pencil className="h-4 w-4" />} onClick={() => { setActiveConnection(row); setSubmitError(null); setFeedback(null); }}>
                   {t('connections.edit')}
                 </Button>
+                <Link className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100" to={`/connections/${row.id}`}>
+                  {t('common.open')}
+                </Link>
                 <Button variant="ghost" icon={<Trash2 className="h-4 w-4" />} onClick={() => { setDeleteTarget(row); setDeleteError(null); }}>
                   {t('common.delete')}
                 </Button>
@@ -176,14 +179,6 @@ export function ConnectionsPage() {
         ]}
         data={resolvedConnections}
         getRowKey={(row) => row.id}
-      />
-
-      <ConnectionsTopology
-        cables={cables.data?.data ?? []}
-        connections={connections.data?.data ?? []}
-        equipment={equipment.data?.data ?? []}
-        upsItems={ups.data?.data ?? []}
-        portsMap={portsMap}
       />
 
       <ConfirmModal

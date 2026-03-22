@@ -1041,6 +1041,22 @@ const getEquipmentRowById = async (equipment_id, ownerUserId) => {
   return equipment || null;
 };
 
+const createPortsForAsset = async (equipmentId, numberOfPorts, portType) => {
+  const normalizedPortType = portType === 'power' ? 'power' : 'patch';
+  const cableType = normalizedPortType === 'power' ? 'powerCable' : 'patchCord';
+  const portsToCreate = Number(numberOfPorts);
+
+  for (let index = 0; index < portsToCreate; index += 1) {
+    await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO ports (equipment_id, port_type, port_number, status, cable_type) VALUES (?, ?, ?, ?, ?)`,
+        [equipmentId, normalizedPortType, index + 1, 'available', cableType],
+        (err) => (err ? reject(err) : resolve())
+      );
+    });
+  }
+};
+
 // Получаем данные стойки по ID (с оборудованием)
 const getSwitchCabinetById = async (switch_cabinet_id, ownerUserId) => {
   const cabinet = await new Promise((resolve, reject) => {
@@ -1140,22 +1156,32 @@ export const createEquipment = async (req, res) => {
     if (!serverData) {
       return res.status(400).json({
         error: 'Для type=server необходимо передать serverData',
-        expected_fields: ['ip_address', 'memory_slots', 'cpu', 'os']
+        expected_fields: ['ip_address', 'memory_slots', 'cpu', 'os', 'number_of_ports', 'port_type']
       });
     }
 
-    const { ip_address, memory_slots, cpu, os } = serverData;
+    const { ip_address, memory_slots, cpu, os, number_of_ports, port_type } = serverData;
     const missingServerFields = [];
     if (!ip_address) missingServerFields.push('ip_address');
     if (memory_slots === undefined) missingServerFields.push('memory_slots');
     if (!cpu) missingServerFields.push('cpu');
     if (!os) missingServerFields.push('os');
+    if (number_of_ports === undefined) missingServerFields.push('number_of_ports');
+    if (!port_type) missingServerFields.push('port_type');
 
     if (missingServerFields.length) {
       return res.status(400).json({
         error: 'serverData заполнен не полностью',
         missing_fields: missingServerFields
       });
+    }
+
+    if (!Number.isFinite(Number(number_of_ports)) || Number(number_of_ports) <= 0) {
+      return res.status(400).json({ error: 'serverData.number_of_ports должен быть числом больше 0' });
+    }
+
+    if (!['patch', 'power'].includes(port_type)) {
+      return res.status(400).json({ error: 'serverData.port_type должен быть patch или power' });
     }
   } else if (type === 'patchPanel') {
     if (!patchPanelData) {
@@ -1175,6 +1201,14 @@ export const createEquipment = async (req, res) => {
         error: 'patchPanelData заполнен не полностью',
         missing_fields: missingPatchPanelFields
       });
+    }
+
+    if (!Number.isFinite(Number(number_of_ports)) || Number(number_of_ports) <= 0) {
+      return res.status(400).json({ error: 'patchPanelData.number_of_ports должен быть числом больше 0' });
+    }
+
+    if (!['patch', 'power'].includes(port_type)) {
+      return res.status(400).json({ error: 'patchPanelData.port_type должен быть patch или power' });
     }
   } else {
     return res.status(400).json({
@@ -1200,7 +1234,7 @@ export const createEquipment = async (req, res) => {
     logger.info(`Success: Equipment created with ID: ${assetId}, Name: ${name}, Type: ${type}`);
 
     if (type === 'server') {
-      const { ip_address, memory_slots, cpu, os } = serverData;
+      const { ip_address, memory_slots, cpu, os, number_of_ports, port_type } = serverData;
       await new Promise((resolve, reject) => {
         const q = `INSERT INTO servers (asset_id, ip_address, memory_slots, cpu, os) VALUES (?, ?, ?, ?, ?)`;
         db.run(q, [assetId, ip_address, memory_slots, cpu, os], (err) => {
@@ -1208,6 +1242,7 @@ export const createEquipment = async (req, res) => {
           resolve();
         });
       });
+      await createPortsForAsset(assetId, number_of_ports, port_type);
       logger.info(`Server data created for Equipment ID: ${assetId}`);
     }
 
@@ -1220,6 +1255,7 @@ export const createEquipment = async (req, res) => {
           resolve();
         });
       });
+      await createPortsForAsset(assetId, number_of_ports, port_type);
       logger.info(`Patch panel data created for Equipment ID: ${assetId}`);
     }
 

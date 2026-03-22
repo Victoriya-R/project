@@ -1,5 +1,5 @@
 import { PropsWithChildren, useMemo } from 'react';
-import { Activity, Cable, ChartColumn, Cpu, LayoutDashboard, LogOut, Map, ShieldCheck, SquareStack, Unplug } from 'lucide-react';
+import { Activity, Cable, ChartColumn, Cpu, LayoutDashboard, LockKeyhole, LogOut, Map, ShieldCheck, SquareStack, Unplug } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth-store';
 import { useI18n } from '../../i18n/provider';
@@ -11,6 +11,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const { user, logout } = useAuthStore();
   const { t } = useI18n();
   const role = user?.role ?? 'user';
+  const isSuperuser = Boolean(user?.isSuperuser);
   const quickSearchPlaceholder = useMemo(() => t('app.searchPlaceholder'), [t]);
 
   const navItems = [
@@ -21,7 +22,8 @@ export function AppShell({ children }: PropsWithChildren) {
     { to: '/zones', label: t('nav.zones'), icon: Map },
     { to: '/connections', label: t('nav.connections'), icon: Activity },
     { to: '/cables', label: t('nav.cables'), icon: Cable },
-    { to: '/reports', label: t('nav.reports'), icon: ChartColumn }
+    { to: '/reports', label: t('nav.reports'), icon: ChartColumn },
+    { to: '/access-management', label: 'Управление доступом', icon: LockKeyhole, disabled: !isSuperuser }
   ];
 
   return (
@@ -36,7 +38,12 @@ export function AppShell({ children }: PropsWithChildren) {
             </div>
           </Link>
           <nav className="mt-8 space-y-1">
-            {navItems.map(({ to, label, icon: Icon }) => (
+            {navItems.map(({ to, label, icon: Icon, disabled }) => disabled ? (
+              <div key={to} className="flex cursor-not-allowed items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300">
+                <Icon className="h-4 w-4" />
+                <span>{label}</span>
+              </div>
+            ) : (
               <NavLink key={to} to={to} className={({ isActive }) => cn('flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition', isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900')}>
                 <Icon className="h-4 w-4" />
                 {label}

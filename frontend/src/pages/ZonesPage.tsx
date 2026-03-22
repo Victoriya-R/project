@@ -12,14 +12,12 @@ import { useApiQuery } from '../hooks/useApiQuery';
 import { ZoneFormModal } from '../modules/inventory/ZoneFormModal';
 import { ZoneNavigator } from '../modules/zones/ZoneNavigator';
 import { equipmentApi, switchCabinetsApi, zonesApi } from '../services/api/client';
-import { useAuthStore } from '../store/auth-store';
 import { Zone } from '../types/entities';
 import { getApiErrorMessage } from '../utils/api-error';
 
 export function ZonesPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const role = useAuthStore((state) => state.user?.role);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -77,7 +75,7 @@ export function ZonesPage() {
         title={t('zones.title')}
         description={t('zones.description')}
         breadcrumbs={<Breadcrumbs items={[{ label: t('nav.dashboard'), href: '/' }, { label: t('nav.zones') }]} />}
-        actions={role === 'admin' ? <Button icon={<Plus className="h-4 w-4" />} onClick={() => { setSelectedZone(null); setSubmitError(null); setFormOpen(true); }}>{t('zones.create')}</Button> : undefined}
+        actions={<Button icon={<Plus className="h-4 w-4" />} onClick={() => { setSelectedZone(null); setSubmitError(null); setFormOpen(true); }}>{t('zones.create')}</Button>}
       />
       <MockBanner meta={zones.data?.meta} />
       <ZoneNavigator zones={zones.data?.data ?? []} cabinets={cabinets.data?.data ?? []} equipment={equipment.data?.data ?? []} />
@@ -90,12 +88,12 @@ export function ZonesPage() {
           {
             key: 'actions',
             header: t('equipment.actions'),
-            render: (row) => role === 'admin' ? (
+            render: (row) => (
               <div className="flex gap-2">
                 <Button variant="ghost" className="px-2.5" onClick={() => { setSelectedZone(row); setSubmitError(null); setFormOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                 <Button variant="ghost" className="px-2.5" onClick={() => { setSelectedZone(row); setDeleteError(null); setDeleteOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
               </div>
-            ) : <span className="text-slate-400">—</span>
+            )
           }
         ]}
         data={zones.data?.data ?? []}

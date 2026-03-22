@@ -185,7 +185,7 @@ export function EquipmentPage() {
         title={t('equipment.title')}
         description={t('equipment.description')}
         breadcrumbs={<Breadcrumbs items={[{ label: t('nav.dashboard'), href: '/' }, { label: t('nav.equipment') }]} />}
-        actions={<><Button variant="secondary">{t('common.import')}</Button>{role === 'admin' ? <Button icon={<Plus className="h-4 w-4" />} onClick={openCreate}>{t('equipment.create')}</Button> : null}</>}
+        actions={<><Button variant="secondary">{t('common.import')}</Button>{<Button icon={<Plus className="h-4 w-4" />} onClick={openCreate}>{t('equipment.create')}</Button>}</>}
       />
       <MockBanner meta={equipment.data?.meta} />
       <FilterBar>
@@ -210,8 +210,8 @@ export function EquipmentPage() {
               render: (row) => (
                 <div className="flex gap-2">
                   <Link to={`/equipment/${row.id}`}><Button variant="ghost" className="px-2.5"><Search className="h-4 w-4" /></Button></Link>
-                  {role === 'admin' ? <Button variant="ghost" className="px-2.5" onClick={() => void openEdit(row)}><Pencil className="h-4 w-4" /></Button> : null}
-                  {role === 'admin' ? <Button variant="ghost" className="px-2.5" onClick={() => openDelete(row)}><Trash2 className="h-4 w-4" /></Button> : null}
+                  {<Button variant="ghost" className="px-2.5" onClick={() => void openEdit(row)}><Pencil className="h-4 w-4" /></Button>}
+                  {<Button variant="ghost" className="px-2.5" onClick={() => openDelete(row)}><Trash2 className="h-4 w-4" /></Button>}
                 </div>
               )
             }

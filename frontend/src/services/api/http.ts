@@ -13,3 +13,20 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const authStore = useAuthStore.getState();
+      if (authStore.token) {
+        authStore.logout();
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.assign('/login');
+        }
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);

@@ -1,5 +1,4 @@
 import express from 'express';  // Используем import вместо require
-import { requireAdmin } from '../middlewares/authMiddleware.js';
 import { 
     createEquipment, 
     getEquipment, 
@@ -82,7 +81,7 @@ const router = express.Router();
  *       403:
  *         description: Forbidden (только admin)
  */
-router.post('/zones', requireAdmin, createZone);
+router.post('/zones', createZone);
 
 /**
  * @swagger
@@ -164,7 +163,7 @@ router.get('/zones/:id', getZoneById);
  *       404:
  *         description: Зона не найдена
  */
-router.put('/zones/:id', requireAdmin, updateZone);
+router.put('/zones/:id', updateZone);
 
 /**
  * @swagger
@@ -189,7 +188,7 @@ router.put('/zones/:id', requireAdmin, updateZone);
  *       409:
  *         description: Нельзя удалить зону, в которой размещены стойки
  */
-router.delete('/zones/:id', requireAdmin, deleteZone);
+router.delete('/zones/:id', deleteZone);
 
 
 /**
@@ -271,7 +270,7 @@ router.get('/ports', getPortsForEquipment);
  *       500:
  *         description: Ошибка при создании соединения
  */
-router.post('/connections', requireAdmin, createConnection);
+router.post('/connections', createConnection);
 
 
 
@@ -334,7 +333,7 @@ router.get('/connections', getConnections);
  *       404:
  *         description: Соединение не найдено
  */
-router.put('/connections/:id', requireAdmin, updateConnection);
+router.put('/connections/:id', updateConnection);
 
 /**
  * @swagger
@@ -360,7 +359,7 @@ router.put('/connections/:id', requireAdmin, updateConnection);
  *       404:
  *         description: Соединение не найдено
  */
-router.delete('/connections/:id', requireAdmin, deleteConnection);
+router.delete('/connections/:id', deleteConnection);
 
 /**
  * @swagger
@@ -402,7 +401,7 @@ router.delete('/connections/:id', requireAdmin, deleteConnection);
  *       401:
  *         description: Unauthorized (нет токена)
  */
-router.post('/cables', requireAdmin, createCable);
+router.post('/cables', createCable);
 
 /**
  * @swagger
@@ -489,7 +488,7 @@ router.get('/cables/:id', getCableById);       // кабель по id
  *       401:
  *         description: Unauthorized
  */
-router.put('/cables/:id', requireAdmin, updateCable);        // обновить кабель
+router.put('/cables/:id', updateCable);        // обновить кабель
 
 /**
  * @swagger
@@ -514,7 +513,7 @@ router.put('/cables/:id', requireAdmin, updateCable);        // обновить
  *       401:
  *         description: Unauthorized
  */
-router.delete('/cables/:id', requireAdmin, deleteCable);     // удалить кабель
+router.delete('/cables/:id', deleteCable);     // удалить кабель
 
 /**
  * @swagger
@@ -562,7 +561,7 @@ router.delete('/cables/:id', requireAdmin, deleteCable);     // удалить �
  *       400:
  *         description: Некорректные данные
  */
-router.post('/switch_cabinets', requireAdmin, createSwitchCabinet);  // Создание новой стойки
+router.post('/switch_cabinets', createSwitchCabinet);  // Создание новой стойки
 
 /**
  * @swagger
@@ -621,7 +620,7 @@ router.post('/switch_cabinets', requireAdmin, createSwitchCabinet);  // Созд
  *       404:
  *         description: Стойка не найдена
  */
-router.put('/switch_cabinets/:id', requireAdmin, updateSwitchCabinet);  // Обновление стойки
+router.put('/switch_cabinets/:id', updateSwitchCabinet);  // Обновление стойки
 
 /**
  * @swagger
@@ -733,7 +732,7 @@ router.get('/switch_cabinets', getAllSwitchCabinets);
  *       404:
  *         description: Стойка не найдена
  */
-router.patch('/switch_cabinets/:id/partial', requireAdmin, partialUpdateSwitchCabinet);  // Частичное обновление стойки
+router.patch('/switch_cabinets/:id/partial', partialUpdateSwitchCabinet);  // Частичное обновление стойки
 
 
 /**
@@ -757,7 +756,7 @@ router.patch('/switch_cabinets/:id/partial', requireAdmin, partialUpdateSwitchCa
  *       404:
  *         description: Стойка не найдена
  */
-router.delete('/switch_cabinets/:id', requireAdmin, deleteSwitchCabinet);  // Удаление стойки
+router.delete('/switch_cabinets/:id', deleteSwitchCabinet);  // Удаление стойки
 
 /**
  * @swagger
@@ -786,7 +785,7 @@ router.delete('/switch_cabinets/:id', requireAdmin, deleteSwitchCabinet);  // У
  *       500:
  *         description: Ошибка при размещении оборудования
  */
-router.put('/placeInSwitchCabinet', requireAdmin, placeInSwitchCabinet);  // Размещение оборудования в стойке
+router.put('/placeInSwitchCabinet', placeInSwitchCabinet);  // Размещение оборудования в стойке
 
 /**
  * @swagger
@@ -817,7 +816,7 @@ router.put('/placeInSwitchCabinet', requireAdmin, placeInSwitchCabinet);  // Р�
  *       409:
  *         description: Оборудование не размещено в стойке
  */
-router.put('/removeFromSwitchCabinet', requireAdmin, removeFromSwitchCabinet);
+router.put('/removeFromSwitchCabinet', removeFromSwitchCabinet);
 
 /**
  * @swagger
@@ -939,7 +938,7 @@ router.put('/removeFromSwitchCabinet', requireAdmin, removeFromSwitchCabinet);
  *       403:
  *         description: Forbidden (только admin)
  */
-router.post('/', requireAdmin, createEquipment);
+router.post('/', createEquipment);
 
 /**
  * @swagger
@@ -1117,7 +1116,7 @@ router.get('/:id', getEquipmentById);
  *       404:
  *         description: Оборудование не найдено
  */
-router.put('/:id', requireAdmin, updateEquipment);
+router.put('/:id', updateEquipment);
 
 /**
  * @swagger
@@ -1138,7 +1137,7 @@ router.put('/:id', requireAdmin, updateEquipment);
  *       404:
  *         description: Оборудование не найдено
  */
-router.delete('/:id', requireAdmin, deleteEquipment);  // Удаление оборудования
+router.delete('/:id', deleteEquipment);  // Удаление оборудования
 
 /**
  * @swagger
@@ -1185,7 +1184,7 @@ router.delete('/:id', requireAdmin, deleteEquipment);  // Удаление об�
  *       403:
  *         description: Forbidden (только admin)
  */
-router.post('/ups', requireAdmin, createUps);
+router.post('/ups', createUps);
 
 /**
  * @swagger
@@ -1286,7 +1285,7 @@ router.get('/ups/:id', getUpsById);                 // чтение (user тож
  *       404:
  *         description: ИБП не найдено
  */
-router.put('/ups/:id', requireAdmin, updateUps);    // изменение (только admin)
+router.put('/ups/:id', updateUps);    // изменение (только admin)
 
 /**
  * @swagger
@@ -1313,7 +1312,7 @@ router.put('/ups/:id', requireAdmin, updateUps);    // изменение (то�
  *       404:
  *         description: ИБП не найдено
  */
-router.delete('/ups/:id', requireAdmin, deleteUps); // удаление (только admin)
+router.delete('/ups/:id', deleteUps); // удаление (только admin)
 
 /**
  * @swagger

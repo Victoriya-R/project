@@ -1,42 +1,46 @@
 import jwt from 'jsonwebtoken';
+import { SECRET_KEY } from '../utils/auth.js';
 
-const SECRET_KEY = 'your_secret_key'; // тот же, что в userController.js
-
-// Проверка токена (как и раньше)
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.startsWith('Bearer ')
-    ? authHeader.split(' ')[1]
-    : null;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-  if (!token) return res.status(401).json({ error: 'Access denied, token missing' });
+  if (!token) {
+    return res.status(401).json({ error: 'Access denied, token missing', code: 'TOKEN_MISSING' });
+  }
 
   jwt.verify(token, SECRET_KEY, (err, decoded) => {
-    if (err) return res.status(401).json({ error: 'Invalid token' });
-    req.user = decoded; // { userId, role }
-    next();
+    if (err?.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+    }
+
+    if (err) {
+      return res.status(401).json({ error: 'Invalid token', code: 'INVALID_TOKEN' });
+    }
+
+    req.user = decoded;
+    return next();
   });
 };
 
-// Универсальная проверка ролей
 export const authorizeRoles = (...allowed) => (req, res, next) => {
   const role = req.user?.role;
 
-  // поддержим и числовые id, и строки (на будущее)
-  const roleName =
-    role === 1 ? 'admin' :
-    role === 2 ? 'user' :
-    typeof role === 'string' ? role :
-    null;
-
-  if (!roleName || !allowed.includes(roleName)) {
+  if (!role || !allowed.includes(role)) {
     return res.status(403).json({ error: 'Forbidden: insufficient permissions' });
   }
 
-  next();
+  return next();
 };
 
-// Удобный хелпер “только админ”
 export const requireAdmin = authorizeRoles('admin');
+
+export const requireSuperuser = (req, res, next) => {
+  if (!req.user?.isSuperuser) {
+    return res.status(403).json({ error: 'Forbidden: superuser permissions required' });
+  }
+
+  return next();
+};
 
 export default authenticateToken;

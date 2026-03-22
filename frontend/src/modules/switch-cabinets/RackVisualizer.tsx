@@ -70,7 +70,7 @@ export function RackVisualizer({ cabinet }: { cabinet: SwitchCabinet }) {
   const [placementError, setPlacementError] = useState<string | null>(null);
   const [placementSuccess, setPlacementSuccess] = useState<string | null>(null);
   const equipmentQuery = useApiQuery({ queryKey: ['equipment'], queryFn: equipmentApi.list });
-  const canManage = role === 'admin';
+  const canManage = Boolean(role);
 
   const units = Array.from({ length: 12 }).map((_, index) => ({ unit: 12 - index, equipment: cabinet.equipment?.[index] }));
   const currentWeight = cabinet.equipment?.reduce((sum, item) => sum + Number(item.weight ?? 0), 0) ?? 0;

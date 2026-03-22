@@ -5,6 +5,7 @@ interface AuthState {
   token: string | null;
   user: AuthUser | null;
   login: (token: string, user: AuthUser) => void;
+  setUser: (user: AuthUser | null) => void;
   logout: () => void;
 }
 
@@ -18,6 +19,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.setItem('dcim_token', token);
     localStorage.setItem('dcim_user', JSON.stringify(user));
     set({ token, user });
+  },
+  setUser: (user) => {
+    if (user) {
+      localStorage.setItem('dcim_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('dcim_user');
+    }
+    set({ user });
   },
   logout: () => {
     localStorage.removeItem('dcim_token');

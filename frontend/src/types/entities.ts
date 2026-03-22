@@ -4,8 +4,18 @@ export type CableType = 'patchCord' | 'powerCable';
 export type UserRole = 'admin' | 'user' | 'analyst';
 
 export interface AuthUser {
+  id?: number;
   username: string;
   role: UserRole;
+  isSuperuser?: boolean;
+}
+
+export interface ManagedUser {
+  id: number;
+  username: string;
+  role: 'admin' | 'user';
+  email?: string;
+  isSuperuser: boolean;
 }
 
 export interface Equipment {

@@ -1,6 +1,8 @@
 import db from '../utils/db.js';  // Подключение к базе данных
 import logger from '../utils/logger.js';  // Логирование
 
+const getOwnerUserId = (req) => Number(req.user?.userId);
+
 // Создание новой зоны с дополнительными полями
 export const createZone = async (req, res) => {
     const { name, description, address, phone, employee, site } = req.body;
@@ -11,10 +13,11 @@ export const createZone = async (req, res) => {
     }
 
     try {
-        const query = `INSERT INTO zones (name, description, address, phone, employee, site) 
-                       VALUES (?, ?, ?, ?, ?, ?)`;
+        const query = `INSERT INTO zones (name, description, address, phone, employee, site, owner_user_id) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        const ownerUserId = getOwnerUserId(req);
         const result = await new Promise((resolve, reject) => {
-            db.run(query, [name, description, address, phone, employee, site], function (err) {
+            db.run(query, [name, description, address, phone, employee, site, ownerUserId], function (err) {
                 if (err) {
                     return reject(err);
                 }
@@ -32,11 +35,12 @@ export const createZone = async (req, res) => {
     }
 };
 export const getZones = async (req, res) => {
-  const query = `SELECT * FROM zones`;
+  const ownerUserId = getOwnerUserId(req);
+  const query = `SELECT * FROM zones WHERE owner_user_id = ?`;
 
   try {
     const rows = await new Promise((resolve, reject) => {
-      db.all(query, [], (err, rows) => {
+      db.all(query, [ownerUserId], (err, rows) => {
         if (err) return reject(err);
         resolve(rows);
       });
@@ -51,11 +55,12 @@ export const getZones = async (req, res) => {
 };
 export const getZoneById = async (req, res) => {
   const { id } = req.params;
-  const query = `SELECT * FROM zones WHERE id = ?`;
+  const ownerUserId = getOwnerUserId(req);
+  const query = `SELECT * FROM zones WHERE id = ? AND owner_user_id = ?`;
 
   try {
     const row = await new Promise((resolve, reject) => {
-      db.get(query, [id], (err, row) => {
+      db.get(query, [id, ownerUserId], (err, row) => {
         if (err) return reject(err);
         resolve(row);
       });
@@ -76,7 +81,6 @@ export const updateZone = async (req, res) => {
   const { id } = req.params;
   const { name, description, address, phone, employee, site } = req.body;
 
-  // хотя бы одно поле должно быть передано
   if (
     name === undefined &&
     description === undefined &&
@@ -88,7 +92,6 @@ export const updateZone = async (req, res) => {
     return res.status(400).json({ error: 'Нужно передать хотя бы одно поле для обновления' });
   }
 
-  // динамический UPDATE: обновляем только то, что пришло
   const fields = [];
   const values = [];
 
@@ -106,9 +109,9 @@ export const updateZone = async (req, res) => {
   addField('employee', employee);
   addField('site', site);
 
-  values.push(id);
+  values.push(getOwnerUserId(req), id);
 
-  const query = `UPDATE zones SET ${fields.join(', ')} WHERE id = ?`;
+  const query = `UPDATE zones SET ${fields.join(', ')} WHERE owner_user_id = ? AND id = ?`;
 
   try {
     const changes = await new Promise((resolve, reject) => {
@@ -135,7 +138,7 @@ export const deleteZone = async (req, res) => {
 
   try {
     const zone = await new Promise((resolve, reject) => {
-      db.get(`SELECT id FROM zones WHERE id = ?`, [id], (err, row) => {
+      db.get(`SELECT id FROM zones WHERE id = ? AND owner_user_id = ?`, [id, getOwnerUserId(req)], (err, row) => {
         if (err) return reject(err);
         resolve(row);
       });
@@ -147,8 +150,8 @@ export const deleteZone = async (req, res) => {
 
     const linkedCabinetsCount = await new Promise((resolve, reject) => {
       db.get(
-        `SELECT COUNT(*) AS count FROM switch_cabinets WHERE zone_id = ?`,
-        [id],
+        `SELECT COUNT(*) AS count FROM switch_cabinets WHERE zone_id = ? AND owner_user_id = ?`,
+        [id, getOwnerUserId(req)],
         (err, row) => {
           if (err) return reject(err);
           resolve(row?.count ?? 0);
@@ -164,7 +167,7 @@ export const deleteZone = async (req, res) => {
     }
 
     const changes = await new Promise((resolve, reject) => {
-      db.run(`DELETE FROM zones WHERE id = ?`, [id], function (err) {
+      db.run(`DELETE FROM zones WHERE id = ? AND owner_user_id = ?`, [id, getOwnerUserId(req)], function (err) {
         if (err) return reject(err);
         resolve(this.changes);
       });
@@ -198,6 +201,17 @@ export const getPortsForEquipment = async (req, res) => {
       WHERE equipment_id = ?
     `;
 
+    const equipment = await new Promise((resolve, reject) => {
+      db.get('SELECT id FROM assets WHERE id = ? AND owner_user_id = ?', [equipment_id, getOwnerUserId(req)], (err, row) => {
+        if (err) return reject(err);
+        resolve(row);
+      });
+    });
+
+    if (!equipment) {
+      return res.status(404).json({ error: 'Оборудование не найдено' });
+    }
+
     const ports = await new Promise((resolve, reject) => {
       db.all(query, [equipment_id], (err, rows) => {
         if (err) return reject(err);
@@ -217,17 +231,20 @@ export const getPortsForEquipment = async (req, res) => {
 };
 
 //валидация портов
-export const validatePortsForConnection = async (a_port_id, b_port_id) => {
+export const validatePortsForConnection = async (a_port_id, b_port_id, ownerUserId) => {
   // Получаем типы портов для каждого порта и их кабели
   const query = `
     SELECT p1.port_type AS port_a_type, p2.port_type AS port_b_type, 
            p1.cable_type AS cable_a, p2.cable_type AS cable_b
     FROM ports p1
     JOIN ports p2 ON p1.id = ? AND p2.id = ?
+    JOIN assets a1 ON a1.id = p1.equipment_id
+    JOIN assets a2 ON a2.id = p2.equipment_id
+    WHERE a1.owner_user_id = ? AND a2.owner_user_id = ?
   `;
 
   return new Promise((resolve, reject) => {
-    db.get(query, [a_port_id, b_port_id], (err, row) => {
+    db.get(query, [a_port_id, b_port_id, ownerUserId, ownerUserId], (err, row) => {
       if (err) return reject(new Error('Ошибка при получении данных портов'));
 
       if (!row) {
@@ -271,16 +288,17 @@ export const createConnection = async (req, res) => {
 
   try {
     // Валидация портов через функцию validatePortsForConnection
-    await validatePortsForConnection(a_port_id, b_port_id);
+    const ownerUserId = getOwnerUserId(req);
+    await validatePortsForConnection(a_port_id, b_port_id, ownerUserId);
 
     // Если проверка прошла, создаем соединение
     const queryInsert = `
-      INSERT INTO connections (cable_id, a_port_id, b_port_id)
-      VALUES (?, ?, ?)
+      INSERT INTO connections (cable_id, a_port_id, b_port_id, owner_user_id)
+      VALUES (?, ?, ?, ?)
     `;
     
     const result = await new Promise((resolve, reject) => {
-      db.run(queryInsert, [cable_id, a_port_id, b_port_id], function (err) {
+      db.run(queryInsert, [cable_id, a_port_id, b_port_id, ownerUserId], function (err) {
         if (err) return reject(err);
         resolve(this.lastID);
       });
@@ -299,11 +317,12 @@ export const createConnection = async (req, res) => {
 
 // Получение всех соединений
 export const getConnections = async (req, res) => {
-    const query = `SELECT * FROM connections`;  // Запрос для получения соединений
+    const ownerUserId = getOwnerUserId(req);
+    const query = `SELECT * FROM connections WHERE owner_user_id = ?`;  // Запрос для получения соединений
 
     try {
         const rows = await new Promise((resolve, reject) => {
-            db.all(query, [], (err, rows) => {
+            db.all(query, [ownerUserId], (err, rows) => {
                 if (err) {
                     return reject(err);
                 }
@@ -333,10 +352,12 @@ export const updateConnection = async (req, res) => {
   }
 
   try {
-    const query = `UPDATE connections SET cable_id = ?, a_port_id = ?, b_port_id = ? WHERE id = ?`;
+    const ownerUserId = getOwnerUserId(req);
+    await validatePortsForConnection(a_port_id, b_port_id, ownerUserId);
+    const query = `UPDATE connections SET cable_id = ?, a_port_id = ?, b_port_id = ? WHERE id = ? AND owner_user_id = ?`;
 
     const changes = await new Promise((resolve, reject) => {
-      db.run(query, [cable_id, a_port_id, b_port_id, id], function (err) {
+      db.run(query, [cable_id, a_port_id, b_port_id, id, ownerUserId], function (err) {
         if (err) return reject(err);
         resolve(this.changes);
       });
@@ -360,10 +381,10 @@ export const deleteConnection = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const query = `DELETE FROM connections WHERE id = ?`;
+    const query = `DELETE FROM connections WHERE id = ? AND owner_user_id = ?`;
 
     const changes = await new Promise((resolve, reject) => {
-      db.run(query, [id], function (err) {
+      db.run(query, [id, getOwnerUserId(req)], function (err) {
         if (err) return reject(err);
         resolve(this.changes);
       });
@@ -410,9 +431,10 @@ export const createCable = async (req, res) => {
   }
 
   try {
-    const query = `INSERT INTO cables (type, length, status, equipment_type_allowed) VALUES (?, ?, ?, ?)`;
+    const query = `INSERT INTO cables (type, length, status, equipment_type_allowed, owner_user_id) VALUES (?, ?, ?, ?, ?)`;
+    const ownerUserId = getOwnerUserId(req);
     const result = await new Promise((resolve, reject) => {
-      db.run(query, [type, length, status, equipment_type_allowed], function (err) {
+      db.run(query, [type, length, status, equipment_type_allowed, ownerUserId], function (err) {
         if (err) return reject(err);
         resolve(this.lastID);
       });
@@ -429,7 +451,7 @@ export const createCable = async (req, res) => {
   }
 };
 export const getCables = async (req, res) => {
-  db.all('SELECT * FROM cables', [], (err, rows) => {
+  db.all('SELECT * FROM cables WHERE owner_user_id = ?', [getOwnerUserId(req)], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     return res.status(200).json(rows);
   });
@@ -438,7 +460,7 @@ export const getCables = async (req, res) => {
 export const getCableById = async (req, res) => {
   const { id } = req.params;
 
-  db.get('SELECT * FROM cables WHERE id = ?', [id], (err, row) => {
+  db.get('SELECT * FROM cables WHERE id = ? AND owner_user_id = ?', [id, getOwnerUserId(req)], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!row) return res.status(404).json({ error: 'Cable not found' });
     return res.status(200).json(row);
@@ -472,8 +494,8 @@ export const updateCable = async (req, res) => {
   }
 
   db.run(
-    `UPDATE cables SET type = ?, length = ?, status = ?, equipment_type_allowed = ? WHERE id = ?`,
-    [type, length, status, equipment_type_allowed, id],
+    `UPDATE cables SET type = ?, length = ?, status = ?, equipment_type_allowed = ? WHERE id = ? AND owner_user_id = ?`,
+    [type, length, status, equipment_type_allowed, id, getOwnerUserId(req)],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       if (this.changes === 0) return res.status(404).json({ error: 'Cable not found' });
@@ -485,7 +507,7 @@ export const updateCable = async (req, res) => {
 export const deleteCable = async (req, res) => {
   const { id } = req.params;
 
-  db.run('DELETE FROM cables WHERE id = ?', [id], function (err) {
+  db.run('DELETE FROM cables WHERE id = ? AND owner_user_id = ?', [id, getOwnerUserId(req)], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) return res.status(404).json({ error: 'Cable not found' });
     return res.status(200).json({ message: 'Кабель удалён', id: Number(id) });
@@ -531,14 +553,14 @@ export const createSwitchCabinet = async (req, res) => {
   try {
     const query = `
       INSERT INTO switch_cabinets
-      (name, weight, energy_consumption, energy_limit, employee, zone_id, description, isDataCenterEquipment, serial_number)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (name, weight, energy_consumption, energy_limit, employee, zone_id, description, isDataCenterEquipment, serial_number, owner_user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const result = await new Promise((resolve, reject) => {
       db.run(
         query,
-        [String(name).trim(), weight, energy_consumption, energy_limit, employee, zone_id, description, isDataCenterEquipment, String(serial_number).trim()],
+        [String(name).trim(), weight, energy_consumption, energy_limit, employee, zone_id, description, isDataCenterEquipment, String(serial_number).trim(), getOwnerUserId(req)],
         function (err) {
           if (err) return reject(err);
           resolve(this.lastID);
@@ -557,11 +579,12 @@ export const createSwitchCabinet = async (req, res) => {
 
 // Получение всех стоек
 export const getAllSwitchCabinets = async (req, res) => {
-  const query = `SELECT * FROM switch_cabinets`;
+  const ownerUserId = getOwnerUserId(req);
+  const query = `SELECT * FROM switch_cabinets WHERE owner_user_id = ?`;
 
   try {
     const rows = await new Promise((resolve, reject) => {
-      db.all(query, [], (err, rows) => {
+      db.all(query, [ownerUserId], (err, rows) => {
         if (err) return reject(err);
         resolve(rows);
       });
@@ -577,7 +600,6 @@ export const getAllSwitchCabinets = async (req, res) => {
 
 export const updateSwitchCabinet = async (req, res) => {
   const id = Number(req.params.id ?? req.body.id);
-
   const {
     name,
     weight,
@@ -594,25 +616,13 @@ export const updateSwitchCabinet = async (req, res) => {
     return res.status(400).json({ error: 'Некорректный id (должно быть число > 0)' });
   }
 
-  // Какие поля считаем обязательными для PUT (полная замена)
-  const required = {
-    name,
-    weight,
-    energy_consumption,
-    energy_limit,
-    serial_number
-    // если хочешь сделать обязательными ещё zone_id / isDataCenterEquipment — просто добавь сюда
-  };
-
+  const required = { name, weight, energy_consumption, energy_limit, serial_number };
   const missing_fields = Object.entries(required)
-    .filter(([_, v]) => v === undefined || v === null || v === '')
-    .map(([k]) => k);
+    .filter(([_, value]) => value === undefined || value === null || value === '')
+    .map(([key]) => key);
 
   if (missing_fields.length) {
-    return res.status(400).json({
-      error: 'Не заполнены обязательные поля',
-      missing_fields
-    });
+    return res.status(400).json({ error: 'Не заполнены обязательные поля', missing_fields });
   }
 
   try {
@@ -627,13 +637,13 @@ export const updateSwitchCabinet = async (req, res) => {
           description = ?,
           isDataCenterEquipment = ?,
           serial_number = ?
-      WHERE id = ?
+      WHERE id = ? AND owner_user_id = ?
     `;
 
     const changes = await new Promise((resolve, reject) => {
       db.run(
         query,
-        [name, weight, energy_consumption, energy_limit, employee, zone_id, description, isDataCenterEquipment, serial_number, id],
+        [name, weight, energy_consumption, energy_limit, employee, zone_id, description, isDataCenterEquipment, serial_number, id, getOwnerUserId(req)],
         function (err) {
           if (err) return reject(err);
           resolve(this.changes);
@@ -647,7 +657,6 @@ export const updateSwitchCabinet = async (req, res) => {
 
     logger.info(`Success: SwitchCabinet with ID: ${id} updated`);
     return res.status(200).json({ message: `Стойка с ID ${id} успешно обновлена` });
-
   } catch (error) {
     logger.error(`Error: Failed to update SwitchCabinet. Error: ${error.message}`);
     return res.status(500).json({ error: error.message });
@@ -667,7 +676,6 @@ export const partialUpdateSwitchCabinet = async (req, res) => {
     const fields = [];
     const values = [];
 
-    // ✅ важно: проверяем на undefined/null, а не на truthy
     if (weight !== undefined) {
       fields.push('weight = ?');
       values.push(weight);
@@ -697,9 +705,8 @@ export const partialUpdateSwitchCabinet = async (req, res) => {
       return res.status(400).json({ error: 'Нет данных для обновления' });
     }
 
-    values.push(id);
-
-    const query = `UPDATE switch_cabinets SET ${fields.join(', ')} WHERE id = ?`;
+    values.push(id, getOwnerUserId(req));
+    const query = `UPDATE switch_cabinets SET ${fields.join(', ')} WHERE id = ? AND owner_user_id = ?`;
 
     const changes = await new Promise((resolve, reject) => {
       db.run(query, values, function (err) {
@@ -708,14 +715,12 @@ export const partialUpdateSwitchCabinet = async (req, res) => {
       });
     });
 
-    // ✅ если не нашли стойку — 404
     if (changes === 0) {
       return res.status(404).json({ error: 'Стойка не найдена' });
     }
 
     logger.info(`Success: Partial update of SwitchCabinet with ID: ${id}`);
     return res.status(200).json({ message: `Стойка с ID ${id} успешно обновлена` });
-
   } catch (error) {
     logger.error(`Error: Failed to partial update SwitchCabinet. Error: ${error.message}`);
     return res.status(500).json({ error: error.message });
@@ -733,7 +738,7 @@ export const getSwitchCabinet = async (req, res) => {
   try {
     // 1) стойка
     const cabinet = await new Promise((resolve, reject) => {
-      db.get('SELECT * FROM switch_cabinets WHERE id = ?', [id], (err, row) => {
+      db.get('SELECT * FROM switch_cabinets WHERE id = ? AND owner_user_id = ?', [id, getOwnerUserId(req)], (err, row) => {
         if (err) return reject(err);
         resolve(row);
       });
@@ -746,8 +751,8 @@ export const getSwitchCabinet = async (req, res) => {
     // 2) оборудование в стойке (берём из assets)
     const equipment = await new Promise((resolve, reject) => {
       db.all(
-        'SELECT id, name, type, model, serial, status, weight, energy_consumption FROM assets WHERE switch_cabinet_id = ?',
-        [id],
+        'SELECT id, name, type, model, serial, status, weight, energy_consumption FROM assets WHERE switch_cabinet_id = ? AND owner_user_id = ?',
+        [id, getOwnerUserId(req)],
         (err, rows) => {
           if (err) return reject(err);
           resolve(rows);
@@ -779,8 +784,8 @@ export const deleteSwitchCabinet = async (req, res) => {
     // (рекомендовано) не удаляем стойку, если в ней есть оборудование
     const cntRow = await new Promise((resolve, reject) => {
       db.get(
-        'SELECT COUNT(*) AS cnt FROM assets WHERE switch_cabinet_id = ?',
-        [id],
+        'SELECT COUNT(*) AS cnt FROM assets WHERE switch_cabinet_id = ? AND owner_user_id = ?',
+        [id, getOwnerUserId(req)],
         (err, row) => (err ? reject(err) : resolve(row))
       );
     });
@@ -793,7 +798,7 @@ export const deleteSwitchCabinet = async (req, res) => {
     }
 
     const changes = await new Promise((resolve, reject) => {
-      db.run('DELETE FROM switch_cabinet WHERE id = ?', [id], function (err) {
+      db.run('DELETE FROM switch_cabinets WHERE id = ? AND owner_user_id = ?', [id, getOwnerUserId(req)], function (err) {
         if (err) return reject(err);
         resolve(this.changes);
       });
@@ -822,10 +827,11 @@ export const placeInSwitchCabinet = async (req, res) => {
   }
 
   try {
-    const switchCabinet = await getSwitchCabinetById(switch_cabinet_id);
+    const ownerUserId = getOwnerUserId(req);
+    const switchCabinet = await getSwitchCabinetById(switch_cabinet_id, ownerUserId);
     if (!switchCabinet) return res.status(404).json({ error: 'Стойка не найдена' });
 
-    const equipment = await getEquipmentRowById(equipment_id);
+    const equipment = await getEquipmentRowById(equipment_id, ownerUserId);
     if (!equipment) return res.status(404).json({ error: 'Оборудование не найдено' });
 
     // текущие суммы в стойке (из helper: массив оборудования)
@@ -860,8 +866,8 @@ export const placeInSwitchCabinet = async (req, res) => {
     // размещаем
     const changes = await new Promise((resolve, reject) => {
       db.run(
-        `UPDATE assets SET switch_cabinet_id = ? WHERE id = ?`,
-        [switch_cabinet_id, equipment_id],
+        `UPDATE assets SET switch_cabinet_id = ? WHERE id = ? AND owner_user_id = ?`,
+        [switch_cabinet_id, equipment_id, ownerUserId],
         function (err) {
           if (err) return reject(err);
           resolve(this.changes);
@@ -888,13 +894,13 @@ export const placeInSwitchCabinet = async (req, res) => {
   }
 };
 
-const getEquipmentRowById = async (equipment_id) => {
+const getEquipmentRowById = async (equipment_id, ownerUserId) => {
   const equipment = await new Promise((resolve, reject) => {
     db.get(
       `SELECT id, name, type, model, serial, status, weight, energy_consumption, switch_cabinet_id
        FROM assets
-       WHERE id = ?`,
-      [equipment_id],
+       WHERE id = ? AND owner_user_id = ?`,
+      [equipment_id, ownerUserId],
       (err, row) => {
         if (err) return reject(err);
         resolve(row);
@@ -906,9 +912,9 @@ const getEquipmentRowById = async (equipment_id) => {
 };
 
 // Получаем данные стойки по ID (с оборудованием)
-const getSwitchCabinetById = async (switch_cabinet_id) => {
+const getSwitchCabinetById = async (switch_cabinet_id, ownerUserId) => {
   const cabinet = await new Promise((resolve, reject) => {
-    db.get(`SELECT * FROM switch_cabinets WHERE id = ?`, [switch_cabinet_id], (err, row) => {
+    db.get(`SELECT * FROM switch_cabinets WHERE id = ? AND owner_user_id = ?`, [switch_cabinet_id, ownerUserId], (err, row) => {
       if (err) return reject(err);
       resolve(row);
     });
@@ -920,8 +926,8 @@ const getSwitchCabinetById = async (switch_cabinet_id) => {
     db.all(
       `SELECT id, name, type, model, serial, status, weight, energy_consumption
        FROM assets
-       WHERE switch_cabinet_id = ?`,
-      [switch_cabinet_id],
+       WHERE switch_cabinet_id = ? AND owner_user_id = ?`,
+      [switch_cabinet_id, ownerUserId],
       (err, rows) => (err ? reject(err) : resolve(rows))
     );
   });
@@ -942,8 +948,8 @@ export const removeFromSwitchCabinet = async (req, res) => {
     // Проверяем, что оборудование существует и размещено
     const row = await new Promise((resolve, reject) => {
       db.get(
-        `SELECT id, switch_cabinet_id FROM assets WHERE id = ?`,
-        [equipment_id],
+        `SELECT id, switch_cabinet_id FROM assets WHERE id = ? AND owner_user_id = ?`,
+        [equipment_id, getOwnerUserId(req)],
         (err, row) => (err ? reject(err) : resolve(row))
       );
     });
@@ -958,8 +964,8 @@ export const removeFromSwitchCabinet = async (req, res) => {
 
     const changes = await new Promise((resolve, reject) => {
       db.run(
-        `UPDATE assets SET switch_cabinet_id = NULL WHERE id = ?`,
-        [equipment_id],
+        `UPDATE assets SET switch_cabinet_id = NULL WHERE id = ? AND owner_user_id = ?`,
+        [equipment_id, getOwnerUserId(req)],
         function (err) {
           if (err) return reject(err);
           resolve(this.changes);
@@ -1053,8 +1059,9 @@ export const createEquipment = async (req, res) => {
     );
 
     const assetId = await new Promise((resolve, reject) => {
-      const q = `INSERT INTO assets (name, type, model, serial, status) VALUES (?, ?, ?, ?, ?)`;
-      db.run(q, [name, type, model, serial, status], function (err) {
+      const q = `INSERT INTO assets (name, type, model, serial, status, owner_user_id) VALUES (?, ?, ?, ?, ?, ?)`;
+      const ownerUserId = getOwnerUserId(req);
+      db.run(q, [name, type, model, serial, status, ownerUserId], function (err) {
         if (err) return reject(err);
         resolve(this.lastID);
       });
@@ -1109,10 +1116,11 @@ export const createEquipment = async (req, res) => {
 export const getEquipmentById = async (req, res) => {
   const { id } = req.params;
 
-  const query = `SELECT * FROM assets WHERE id = ?`;
+  const ownerUserId = getOwnerUserId(req);
+  const query = `SELECT * FROM assets WHERE id = ? AND owner_user_id = ?`;
   try {
     const row = await new Promise((resolve, reject) => {
-      db.get(query, [id], (err, row) => {
+      db.get(query, [id, ownerUserId], (err, row) => {
         if (err) return reject(err);
         resolve(row);
       });
@@ -1132,11 +1140,12 @@ export const getEquipmentById = async (req, res) => {
 
 // Получение списка оборудования с использованием async/await
 export const getEquipment = async (req, res) => {
-    const query = 'SELECT * FROM assets';  // Запрос для получения оборудования
+    const ownerUserId = getOwnerUserId(req);
+    const query = 'SELECT * FROM assets WHERE owner_user_id = ?';
 
     try {
         const rows = await new Promise((resolve, reject) => {
-            db.all(query, [], (err, rows) => {
+            db.all(query, [ownerUserId], (err, rows) => {
                 if (err) {
                     return reject(err);
                 }
@@ -1145,7 +1154,7 @@ export const getEquipment = async (req, res) => {
         });
 
         logger.info(`Success: Fetched ${rows.length} equipment`);
-        res.json(rows);  // Отправка данных в ответ
+        res.json(rows);
     } catch (error) {
         logger.error(`Error: Failed to fetch equipment. Error: ${error.message}`);
         res.status(500).json({ error: error.message });
@@ -1155,12 +1164,12 @@ export const getEquipment = async (req, res) => {
 // Получение оборудования по статусу
 export const getEquipmentByStatus = async (req, res) => {
     const { status } = req.params;
-
-    const query = 'SELECT * FROM assets WHERE status = ?';
+    const ownerUserId = getOwnerUserId(req);
+    const query = 'SELECT * FROM assets WHERE status = ? AND owner_user_id = ?';
     
     try {
         const rows = await new Promise((resolve, reject) => {
-            db.all(query, [status], (err, rows) => {
+            db.all(query, [status, ownerUserId], (err, rows) => {
                 if (err) {
                     return reject(err);
                 }
@@ -1169,7 +1178,7 @@ export const getEquipmentByStatus = async (req, res) => {
         });
 
         logger.info(`Success: Fetched ${rows.length} equipment with status: ${status}`);
-        res.json(rows);  // Отправка данных в ответ
+        res.json(rows);
     } catch (error) {
         logger.error(`Error: Failed to fetch equipment by status. Error: ${error.message}`);
         res.status(500).json({ error: error.message });
@@ -1186,9 +1195,9 @@ export const updateEquipment = async (req, res) => {
   }
 
   try {
-    const query = `UPDATE assets SET name = ?, status = ? WHERE id = ?`;
+    const query = `UPDATE assets SET name = ?, status = ? WHERE id = ? AND owner_user_id = ?`;
     const result = await new Promise((resolve, reject) => {
-      db.run(query, [name, status, id], function (err) {
+      db.run(query, [name, status, id, getOwnerUserId(req)], function (err) {
         if (err) return reject(err);
         resolve(this.changes);
       });
@@ -1211,8 +1220,8 @@ export const updateEquipment = async (req, res) => {
 export const deleteEquipment = (req, res) => {
     const { id } = req.params;
 
-    const query = `DELETE FROM assets WHERE id = ?`;
-    db.run(query, [id], function (err) {
+    const query = `DELETE FROM assets WHERE id = ? AND owner_user_id = ?`;
+    db.run(query, [id, getOwnerUserId(req)], function (err) {
         if (err) {
             logger.error(`Error: Failed to delete equipment with ID: ${id}. Error: ${err.message}`);
             return res.status(500).json({ error: 'Database error' });
@@ -1250,9 +1259,10 @@ export const createUps = async (req, res) => {
     await new Promise((resolve, reject) => db.run('BEGIN TRANSACTION', (e) => e ? reject(e) : resolve()));
 
     // Добавляем ИБП в таблицу assets
-    const query = `INSERT INTO assets (name, type, model, serial, status) VALUES (?, ?, ?, ?, ?)`;
+    const query = `INSERT INTO assets (name, type, model, serial, status, owner_user_id) VALUES (?, ?, ?, ?, ?, ?)`;
+    const ownerUserId = getOwnerUserId(req);
     const result = await new Promise((resolve, reject) => {
-      db.run(query, [name, 'ups', model, serial, status], function (err) {
+      db.run(query, [name, 'ups', model, serial, status, ownerUserId], function (err) {
         if (err) return reject(err);
         resolve(this.lastID);
       });
@@ -1295,10 +1305,21 @@ export const getPortsForUps = async (req, res) => {
   }
 
   try {
+    const equipment = await new Promise((resolve, reject) => {
+      db.get(`SELECT id FROM assets WHERE id = ? AND type = 'ups' AND owner_user_id = ?`, [equipment_id, getOwnerUserId(req)], (err, row) => {
+        if (err) return reject(err);
+        resolve(row);
+      });
+    });
+
+    if (!equipment) {
+      return res.status(404).json({ error: 'ИБП не найдено' });
+    }
+
     const query = `
       SELECT id, port_type, port_number, status, cable_type
       FROM ports
-      WHERE equipment_id IN (SELECT id FROM ups WHERE id = ?)
+      WHERE equipment_id = ?
     `;
 
     const ports = await new Promise((resolve, reject) => {
@@ -1346,7 +1367,8 @@ const createPortsForUps = async (ups_id) => {
 
 
 export const getUpsById = async (req, res) => {
-  const { id } = req.params; // asset_id
+  const { id } = req.params;
+  const ownerUserId = getOwnerUserId(req);
 
   const query = `
     SELECT 
@@ -1354,10 +1376,10 @@ export const getUpsById = async (req, res) => {
       u.id as ups_id, u.capacity, u.battery_life, u.status as ups_status
     FROM assets a
     JOIN ups u ON u.asset_id = a.id
-    WHERE a.id = ? AND a.type = 'ups'
+    WHERE a.id = ? AND a.type = 'ups' AND a.owner_user_id = ?
   `;
 
-  db.get(query, [id], (err, row) => {
+  db.get(query, [id, ownerUserId], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!row) return res.status(404).json({ error: 'UPS not found' });
 
@@ -1392,8 +1414,8 @@ export const updateUps = async (req, res) => {
 
     const aChanges = await new Promise((resolve, reject) => {
       db.run(
-        `UPDATE assets SET name = ?, status = ? WHERE id = ? AND type = 'ups'`,
-        [name, status, id],
+        `UPDATE assets SET name = ?, status = ? WHERE id = ? AND type = 'ups' AND owner_user_id = ?`,
+        [name, status, id, getOwnerUserId(req)],
         function (err) {
           if (err) return reject(err);
           resolve(this.changes);
@@ -1446,7 +1468,7 @@ export const deleteUps = async (req, res) => {
     }
 
     await new Promise((resolve, reject) => {
-      db.run(`DELETE FROM assets WHERE id = ? AND type = 'ups'`, [id], function (err) {
+      db.run(`DELETE FROM assets WHERE id = ? AND type = 'ups' AND owner_user_id = ?`, [id, getOwnerUserId(req)], function (err) {
         if (err) return reject(err);
         resolve(this.changes);
       });
@@ -1464,6 +1486,7 @@ export const deleteUps = async (req, res) => {
 
 export const getEquipmentStatusReport = async (req, res) => {
   try {
+    const ownerUserId = getOwnerUserId(req);
     const query = `
       SELECT 
         type, 
@@ -1472,10 +1495,11 @@ export const getEquipmentStatusReport = async (req, res) => {
         SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) AS inactive_count,
         SUM(CASE WHEN status = 'maintenance' THEN 1 ELSE 0 END) AS maintenance_count
       FROM assets
+      WHERE owner_user_id = ?
       GROUP BY type;
     `;
     const rows = await new Promise((resolve, reject) => {
-      db.all(query, [], (err, rows) => {
+      db.all(query, [ownerUserId], (err, rows) => {
         if (err) return reject(err);
         resolve(rows);
       });
@@ -1488,6 +1512,7 @@ export const getEquipmentStatusReport = async (req, res) => {
 };
 export const getSwitchCabinetsReport = async (req, res) => {
   try {
+    const ownerUserId = getOwnerUserId(req);
     const query = `
       SELECT
         sc.id,
@@ -1501,19 +1526,16 @@ export const getSwitchCabinetsReport = async (req, res) => {
         COUNT(a.id) AS equipment_count,
         COALESCE(SUM(COALESCE(a.weight, 0)), 0) AS current_weight,
         COALESCE(SUM(COALESCE(a.energy_consumption, 0)), 0) AS current_energy_consumption,
-
         CASE
           WHEN sc.weight IS NOT NULL AND sc.weight > 0
             THEN ROUND(COALESCE(SUM(COALESCE(a.weight, 0)), 0) * 100.0 / sc.weight, 2)
           ELSE 0
         END AS weight_load_percent,
-
         CASE
           WHEN sc.energy_limit IS NOT NULL AND sc.energy_limit > 0
             THEN ROUND(COALESCE(SUM(COALESCE(a.energy_consumption, 0)), 0) * 100.0 / sc.energy_limit, 2)
           ELSE 0
         END AS energy_load_percent,
-
         CASE
           WHEN sc.weight IS NOT NULL
                AND sc.weight > 0
@@ -1521,7 +1543,6 @@ export const getSwitchCabinetsReport = async (req, res) => {
             THEN 1
           ELSE 0
         END AS is_weight_overloaded,
-
         CASE
           WHEN sc.energy_limit IS NOT NULL
                AND sc.energy_limit > 0
@@ -1529,26 +1550,16 @@ export const getSwitchCabinetsReport = async (req, res) => {
             THEN 1
           ELSE 0
         END AS is_energy_overloaded
-
       FROM switch_cabinets sc
-      LEFT JOIN assets a
-        ON a.switch_cabinet_id = sc.id
-      LEFT JOIN zones z
-        ON z.id = sc.zone_id
-      GROUP BY
-        sc.id,
-        sc.name,
-        sc.serial_number,
-        sc.zone_id,
-        z.name,
-        sc.employee,
-        sc.weight,
-        sc.energy_limit
+      LEFT JOIN assets a ON a.switch_cabinet_id = sc.id AND a.owner_user_id = sc.owner_user_id
+      LEFT JOIN zones z ON z.id = sc.zone_id AND z.owner_user_id = sc.owner_user_id
+      WHERE sc.owner_user_id = ?
+      GROUP BY sc.id, sc.name, sc.serial_number, sc.zone_id, z.name, sc.employee, sc.weight, sc.energy_limit
       ORDER BY sc.id;
     `;
 
     const rows = await new Promise((resolve, reject) => {
-      db.all(query, [], (err, rows) => {
+      db.all(query, [ownerUserId], (err, rows) => {
         if (err) return reject(err);
         resolve(rows);
       });
@@ -1561,6 +1572,7 @@ export const getSwitchCabinetsReport = async (req, res) => {
 };
 export const getZonesReport = async (req, res) => {
   try {
+    const ownerUserId = getOwnerUserId(req);
     const query = `
       SELECT
         z.id,
@@ -1578,23 +1590,15 @@ export const getZonesReport = async (req, res) => {
         SUM(CASE WHEN a.status = 'inactive' THEN 1 ELSE 0 END) AS inactive_equipment_count,
         SUM(CASE WHEN a.status = 'maintenance' THEN 1 ELSE 0 END) AS maintenance_equipment_count
       FROM zones z
-      LEFT JOIN switch_cabinets sc
-        ON sc.zone_id = z.id
-      LEFT JOIN assets a
-        ON a.switch_cabinet_id = sc.id
-      GROUP BY
-        z.id,
-        z.name,
-        z.description,
-        z.address,
-        z.phone,
-        z.employee,
-        z.site
+      LEFT JOIN switch_cabinets sc ON sc.zone_id = z.id AND sc.owner_user_id = z.owner_user_id
+      LEFT JOIN assets a ON a.switch_cabinet_id = sc.id AND a.owner_user_id = z.owner_user_id
+      WHERE z.owner_user_id = ?
+      GROUP BY z.id, z.name, z.description, z.address, z.phone, z.employee, z.site
       ORDER BY z.id;
     `;
 
     const rows = await new Promise((resolve, reject) => {
-      db.all(query, [], (err, rows) => {
+      db.all(query, [ownerUserId], (err, rows) => {
         if (err) return reject(err);
         resolve(rows);
       });
@@ -1609,72 +1613,57 @@ export const getZonesReport = async (req, res) => {
 
 export const getZoneLoadReport = async (req, res) => {
   try {
+    const ownerUserId = getOwnerUserId(req);
     const query = `
       SELECT
         z.id,
         z.name AS zone_name,
         COUNT(DISTINCT sc.id) AS switch_cabinet_count,
         COUNT(a.id) AS equipment_count,
-
         COALESCE(SUM(COALESCE(sc.weight, 0)), 0) AS total_weight_limit,
         COALESCE(SUM(COALESCE(a.weight, 0)), 0) AS current_weight,
-
         COALESCE(SUM(COALESCE(sc.energy_limit, 0)), 0) AS total_energy_limit,
         COALESCE(SUM(COALESCE(a.energy_consumption, 0)), 0) AS current_energy_consumption,
-
         CASE
           WHEN COALESCE(SUM(COALESCE(sc.weight, 0)), 0) > 0
-            THEN ROUND(
-              COALESCE(SUM(COALESCE(a.weight, 0)), 0) * 100.0 /
-              COALESCE(SUM(COALESCE(sc.weight, 0)), 0), 2
-            )
+            THEN ROUND(COALESCE(SUM(COALESCE(a.weight, 0)), 0) * 100.0 / COALESCE(SUM(COALESCE(sc.weight, 0)), 0), 2)
           ELSE 0
         END AS weight_load_percent,
-
         CASE
           WHEN COALESCE(SUM(COALESCE(sc.energy_limit, 0)), 0) > 0
-            THEN ROUND(
-              COALESCE(SUM(COALESCE(a.energy_consumption, 0)), 0) * 100.0 /
-              COALESCE(SUM(COALESCE(sc.energy_limit, 0)), 0), 2
-            )
+            THEN ROUND(COALESCE(SUM(COALESCE(a.energy_consumption, 0)), 0) * 100.0 / COALESCE(SUM(COALESCE(sc.energy_limit, 0)), 0), 2)
           ELSE 0
         END AS energy_load_percent,
-
         COUNT(DISTINCT CASE
           WHEN sc.weight IS NOT NULL
                AND sc.weight > 0
                AND (
                  SELECT COALESCE(SUM(COALESCE(a2.weight, 0)), 0)
                  FROM assets a2
-                 WHERE a2.switch_cabinet_id = sc.id
+                 WHERE a2.switch_cabinet_id = sc.id AND a2.owner_user_id = z.owner_user_id
                ) > sc.weight
           THEN sc.id
         END) AS overloaded_by_weight_cabinets,
-
         COUNT(DISTINCT CASE
           WHEN sc.energy_limit IS NOT NULL
                AND sc.energy_limit > 0
                AND (
                  SELECT COALESCE(SUM(COALESCE(a3.energy_consumption, 0)), 0)
                  FROM assets a3
-                 WHERE a3.switch_cabinet_id = sc.id
+                 WHERE a3.switch_cabinet_id = sc.id AND a3.owner_user_id = z.owner_user_id
                ) > sc.energy_limit
           THEN sc.id
         END) AS overloaded_by_energy_cabinets
-
       FROM zones z
-      LEFT JOIN switch_cabinets sc
-        ON sc.zone_id = z.id
-      LEFT JOIN assets a
-        ON a.switch_cabinet_id = sc.id
-      GROUP BY
-        z.id,
-        z.name
+      LEFT JOIN switch_cabinets sc ON sc.zone_id = z.id AND sc.owner_user_id = z.owner_user_id
+      LEFT JOIN assets a ON a.switch_cabinet_id = sc.id AND a.owner_user_id = z.owner_user_id
+      WHERE z.owner_user_id = ?
+      GROUP BY z.id, z.name
       ORDER BY z.id;
     `;
 
     const rows = await new Promise((resolve, reject) => {
-      db.all(query, [], (err, rows) => {
+      db.all(query, [ownerUserId], (err, rows) => {
         if (err) return reject(err);
         resolve(rows);
       });

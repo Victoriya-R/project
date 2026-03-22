@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useI18n } from '../i18n/provider';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { DataTable } from '../components/common/DataTable';
 import { MockBanner } from '../components/common/MockBanner';
@@ -9,6 +10,7 @@ import { cablesApi, connectionsApi, equipmentApi, upsApi } from '../services/api
 import { createDefaultPortsForEquipment } from '../utils/ports';
 
 export function ConnectionsPage() {
+  const { t } = useI18n();
   const cables = useApiQuery({ queryKey: ['cables'], queryFn: cablesApi.list });
   const connections = useApiQuery({ queryKey: ['connections'], queryFn: connectionsApi.list });
   const equipment = useApiQuery({ queryKey: ['equipment'], queryFn: equipmentApi.list });
@@ -22,16 +24,16 @@ export function ConnectionsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Connections" description="Separate enterprise flow for creating cable-based connections between compatible ports with understandable validation states." breadcrumbs={<Breadcrumbs items={[{ label: 'Dashboard', href: '/' }, { label: 'Connections' }]} />} />
+      <PageHeader title={t('connections.title')} description={t('connections.description')} breadcrumbs={<Breadcrumbs items={[{ label: t('nav.dashboard'), href: '/' }, { label: t('nav.connections') }]} />} />
       <MockBanner meta={connections.data?.meta?.usingMock ? connections.data.meta : cables.data?.meta} />
       <ConnectionWizard cables={cables.data?.data ?? []} equipment={equipment.data?.data ?? []} upsItems={ups.data?.data ?? []} portsMap={portsMap} />
       <DataTable
         columns={[
-          { key: 'id', header: 'Connection', render: (row) => `#${row.id}` },
-          { key: 'cable', header: 'Cable', render: (row) => cables.data?.data.find((item) => item.id === row.cable_id)?.type ?? row.cable_id },
-          { key: 'a', header: 'Port A', render: (row) => row.a_port_id },
-          { key: 'b', header: 'Port B', render: (row) => row.b_port_id },
-          { key: 'status', header: 'Status', render: (row) => row.status ?? 'active' }
+          { key: 'id', header: t('connections.connection'), render: (row) => `#${row.id}` },
+          { key: 'cable', header: t('connections.cable'), render: (row) => cables.data?.data.find((item) => item.id === row.cable_id)?.type ?? row.cable_id },
+          { key: 'a', header: t('connections.portA'), render: (row) => row.a_port_id },
+          { key: 'b', header: t('connections.portB'), render: (row) => row.b_port_id },
+          { key: 'status', header: t('equipment.status'), render: (row) => row.status ?? 'active' }
         ]}
         data={connections.data?.data ?? []}
       />

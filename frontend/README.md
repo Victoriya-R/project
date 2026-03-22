@@ -23,3 +23,13 @@ npm run dev
 ```
 
 Set `VITE_API_BASE_URL` if the backend is not running on `http://localhost:3000`.
+
+
+
+## Local launch notes
+
+- Start backend from the repository root with `npm run backend`.
+- Start frontend with `npm --prefix frontend run dev` or from the `frontend/` folder with `npm run dev`.
+- Browser login requires backend CORS to allow `http://localhost:5173`; the Express app now sets this via `FRONTEND_ORIGIN` or defaults to the Vite origin.
+- If backend is down or unreachable, the login screen intentionally falls back to a demo session.
+>>>>>>> codex-ui

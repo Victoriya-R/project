@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom';
+import { useI18n } from '../i18n/provider';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { DataTable } from '../components/common/DataTable';
 import { InfoCard } from '../components/common/InfoCard';
@@ -8,6 +9,7 @@ import { useApiQuery } from '../hooks/useApiQuery';
 import { equipmentApi, switchCabinetsApi, zonesApi } from '../services/api/client';
 
 export function ZoneDetailPage() {
+  const { t } = useI18n();
   const { id = '0' } = useParams();
   const zone = useApiQuery({ queryKey: ['zone-detail', id], queryFn: () => zonesApi.detail(Number(id)) });
   const cabinets = useApiQuery({ queryKey: ['cabinet-list'], queryFn: switchCabinetsApi.list });
@@ -20,19 +22,19 @@ export function ZoneDetailPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={zone.data.data.name} description="Zone card with placement navigator, rack count and direct links into asset inventory." breadcrumbs={<Breadcrumbs items={[{ label: 'Dashboard', href: '/' }, { label: 'Zones', href: '/zones' }, { label: zone.data.data.name }]} />} />
+      <PageHeader title={zone.data.data.name} description={t('zone.detail.description')} breadcrumbs={<Breadcrumbs items={[{ label: t('nav.dashboard'), href: '/' }, { label: t('nav.zones'), href: '/zones' }, { label: zone.data.data.name }]} />} />
       <MockBanner meta={zone.data.meta} />
       <section className="grid gap-4 xl:grid-cols-3">
-        <InfoCard title="Switch cabinets" value={String(zoneCabinets.length)} description="Racks placed in this zone" />
-        <InfoCard title="Equipment" value={String(zoneEquipment.length)} description="Assets currently placed in those racks" />
-        <InfoCard title="Owner" value={zone.data.data.employee ?? '—'} description={zone.data.data.site ?? 'Site not specified'} />
+        <InfoCard title={t('zone.detail.switchCabinets')} value={String(zoneCabinets.length)} description={t('zone.detail.switchCabinetsDesc')} />
+        <InfoCard title={t('zone.detail.equipment')} value={String(zoneEquipment.length)} description={t('zone.detail.equipmentDesc')} />
+        <InfoCard title={t('zone.detail.owner')} value={zone.data.data.employee ?? '—'} description={zone.data.data.site ?? t('common.placeholderSite')} />
       </section>
       <DataTable
         columns={[
-          { key: 'name', header: 'Rack', render: (row) => row.name },
-          { key: 'serial', header: 'Serial', render: (row) => row.serial_number },
-          { key: 'energy', header: 'Energy limit', render: (row) => `${row.energy_limit} W` },
-          { key: 'equipment', header: 'Equipment count', render: (row) => `${row.equipment?.length ?? 0}` }
+          { key: 'name', header: t('equipment.rack'), render: (row) => row.name },
+          { key: 'serial', header: t('zone.detail.serial'), render: (row) => row.serial_number },
+          { key: 'energy', header: t('zone.detail.energyLimit'), render: (row) => `${row.energy_limit} W` },
+          { key: 'equipment', header: t('zone.detail.equipmentCount'), render: (row) => `${row.equipment?.length ?? 0}` }
         ]}
         data={zoneCabinets}
       />

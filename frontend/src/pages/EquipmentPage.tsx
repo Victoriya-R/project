@@ -1,6 +1,7 @@
 import { Plus, Search, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useI18n } from '../i18n/provider';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { Button } from '../components/common/Button';
 import { DataTable } from '../components/common/DataTable';
@@ -16,6 +17,7 @@ import { equipmentApi, switchCabinetsApi, zonesApi } from '../services/api/clien
 import { useAuthStore } from '../store/auth-store';
 
 export function EquipmentPage() {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [type, setType] = useState('');
@@ -43,36 +45,36 @@ export function EquipmentPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Equipment"
-        description="Unified asset registry with filters, placement context, card-style drilldown and quick access to port topology."
-        breadcrumbs={<Breadcrumbs items={[{ label: 'Dashboard', href: '/' }, { label: 'Equipment' }]} />}
-        actions={<><Button variant="secondary">Import</Button>{role === 'admin' ? <Button icon={<Plus className="h-4 w-4" />}>Create equipment</Button> : null}</>}
+        title={t('equipment.title')}
+        description={t('equipment.description')}
+        breadcrumbs={<Breadcrumbs items={[{ label: t('nav.dashboard'), href: '/' }, { label: t('nav.equipment') }]} />}
+        actions={<><Button variant="secondary">{t('common.import')}</Button>{role === 'admin' ? <Button icon={<Plus className="h-4 w-4" />}>{t('common.createEquipment')}</Button> : null}</>}
       />
       <MockBanner meta={equipment.data?.meta} />
       <FilterBar>
-        <FormField label="Search"><TextInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or serial" /></FormField>
-        <FormField label="Type"><SelectInput value={type} onChange={(e) => setType(e.target.value)}><option value="">All</option><option value="server">Server</option><option value="patchPanel">Patch panel</option><option value="ups">UPS</option></SelectInput></FormField>
-        <FormField label="Status"><SelectInput value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="maintenance">Maintenance</option><option value="planned">Planned</option></SelectInput></FormField>
-        <FormField label="Zone"><SelectInput value={zone} onChange={(e) => setZone(e.target.value)}><option value="">All</option>{zones.data?.data.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectInput></FormField>
-        <FormField label="Rack"><SelectInput value={cabinet} onChange={(e) => setCabinet(e.target.value)}><option value="">All</option>{cabinets.data?.data.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectInput></FormField>
+        <FormField label={t('equipment.search')}><TextInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('equipment.searchPlaceholder')} /></FormField>
+        <FormField label={t('equipment.type')}><SelectInput value={type} onChange={(e) => setType(e.target.value)}><option value="">{t('common.all')}</option><option value="server">{t('equipment.type.server')}</option><option value="patchPanel">{t('equipment.type.patchPanel')}</option><option value="ups">{t('equipment.type.ups')}</option></SelectInput></FormField>
+        <FormField label={t('equipment.status')}><SelectInput value={status} onChange={(e) => setStatus(e.target.value)}><option value="">{t('common.all')}</option><option value="active">{t('status.active')}</option><option value="inactive">{t('status.inactive')}</option><option value="maintenance">{t('status.maintenance')}</option><option value="planned">{t('status.planned')}</option></SelectInput></FormField>
+        <FormField label={t('equipment.zone')}><SelectInput value={zone} onChange={(e) => setZone(e.target.value)}><option value="">{t('common.all')}</option>{zones.data?.data.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectInput></FormField>
+        <FormField label={t('equipment.rack')}><SelectInput value={cabinet} onChange={(e) => setCabinet(e.target.value)}><option value="">{t('common.all')}</option>{cabinets.data?.data.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectInput></FormField>
       </FilterBar>
       {filtered.length ? (
         <DataTable
           columns={[
-            { key: 'name', header: 'Name', render: (row) => <div><Link to={`/equipment/${row.id}`} className="font-semibold text-slate-900 hover:text-brand-700">{row.name}</Link><p className="text-xs text-slate-500">{row.model}</p></div> },
-            { key: 'type', header: 'Type', render: (row) => row.type },
-            { key: 'serial', header: 'Serial', render: (row) => row.serial },
-            { key: 'status', header: 'Status', render: (row) => <StatusBadge status={row.status} /> },
-            { key: 'metrics', header: 'Weight / Energy', render: (row) => <div><p>{row.weight ?? '—'} kg</p><p className="text-xs text-slate-500">{row.energy_consumption ?? '—'} W</p></div> },
-            { key: 'rack', header: 'Rack', render: (row) => cabinets.data?.data.find((item) => item.id === row.switch_cabinet_id)?.name ?? 'Unassigned' },
-            { key: 'actions', header: 'Actions', render: () => <div className="flex gap-2"><Button variant="ghost" className="px-2.5"><Search className="h-4 w-4" /></Button>{role === 'admin' ? <Button variant="ghost" className="px-2.5" onClick={() => setDeleteOpen(true)}><Trash2 className="h-4 w-4" /></Button> : null}</div> }
+            { key: 'name', header: t('nav.equipment'), render: (row) => <div><Link to={`/equipment/${row.id}`} className="font-semibold text-slate-900 hover:text-brand-700">{row.name}</Link><p className="text-xs text-slate-500">{row.model}</p></div> },
+            { key: 'type', header: t('equipment.type'), render: (row) => t(`equipment.type.${row.type}` as const) },
+            { key: 'serial', header: t('equipment.detail.serial'), render: (row) => row.serial },
+            { key: 'status', header: t('equipment.status'), render: (row) => <StatusBadge status={row.status} /> },
+            { key: 'metrics', header: t('equipment.weightEnergy'), render: (row) => <div><p>{row.weight ?? '—'} kg</p><p className="text-xs text-slate-500">{row.energy_consumption ?? '—'} W</p></div> },
+            { key: 'rack', header: t('equipment.rack'), render: (row) => cabinets.data?.data.find((item) => item.id === row.switch_cabinet_id)?.name ?? t('common.unassigned') },
+            { key: 'actions', header: t('equipment.actions'), render: () => <div className="flex gap-2"><Button variant="ghost" className="px-2.5"><Search className="h-4 w-4" /></Button>{role === 'admin' ? <Button variant="ghost" className="px-2.5" onClick={() => setDeleteOpen(true)}><Trash2 className="h-4 w-4" /></Button> : null}</div> }
           ]}
           data={filtered}
         />
-      ) : <EmptyState title="No equipment found" description="Adjust filters or create a new asset to start filling the rack topology." />}
-      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Confirm deletion">
-        <p className="text-sm text-slate-600">Опасное действие должно быть подтверждено. Здесь будет вызов backend delete endpoint после выбора конкретного объекта.</p>
-        <div className="mt-6 flex justify-end gap-3"><Button variant="secondary" onClick={() => setDeleteOpen(false)}>Cancel</Button><Button variant="danger" onClick={() => setDeleteOpen(false)}>Delete</Button></div>
+      ) : <EmptyState title={t('equipment.noResults')} description={t('equipment.noResultsDesc')} />}
+      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title={t('equipment.confirmDelete')}>
+        <p className="text-sm text-slate-600">{t('equipment.confirmDeleteDesc')}</p>
+        <div className="mt-6 flex justify-end gap-3"><Button variant="secondary" onClick={() => setDeleteOpen(false)}>{t('common.cancel')}</Button><Button variant="danger" onClick={() => setDeleteOpen(false)}>{t('common.delete')}</Button></div>
       </Modal>
     </div>
   );

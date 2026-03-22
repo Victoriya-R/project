@@ -151,7 +151,15 @@ export const equipmentApi = {
 export const upsApi = {
   list: () => withFallback<UpsEntity[]>('/equipment/ups (derived)', async () => {
     const equipment = (await api.get<Equipment[]>('/equipment')).data.filter((item) => item.type === 'ups');
-    return Promise.all(equipment.map(async (item) => (await api.get<UpsEntity>(`/equipment/ups/${item.id}`)).data));
+    return Promise.all(equipment.map(async (item) => {
+      const detail = (await api.get<UpsEntity>(`/equipment/ups/${item.id}`)).data;
+      try {
+        const ports = (await api.get<Port[]>(`/equipment/ups/${item.id}/ports`, { params: { equipment_id: item.id } })).data;
+        return { ...detail, ports };
+      } catch {
+        return detail;
+      }
+    }));
   }, () => mockUps, 'UPS list endpoint is not explicitly available in backend, so UI derives it or falls back to fixtures.'),
   detail: (id: number) => withFallback<UpsEntity>('/equipment/ups/:id', async () => (await api.get(`/equipment/ups/${id}`)).data, () => mockUps.find((item) => item.id === id) ?? mockUps[0], 'UPS detail fallback uses local fixtures.'),
   ports: (equipmentId: number) => withFallback<Port[]>('/equipment/ups/:id/ports', async () => (await api.get(`/equipment/ups/${equipmentId}/ports`, { params: { equipment_id: equipmentId } })).data, () => getPortsByEquipment(equipmentId), 'UPS ports fallback uses local fixtures.'),

@@ -14,6 +14,7 @@ import { UpsDetailPage } from '../pages/UpsDetailPage';
 import { UpsPage } from '../pages/UpsPage';
 import { ZoneDetailPage } from '../pages/ZoneDetailPage';
 import { ZonesPage } from '../pages/ZonesPage';
+import { AccessManagementPage } from '../pages/AccessManagementPage';
 
 function ProtectedLayout() {
   const token = useAuthStore((state) => state.token);
@@ -39,6 +40,7 @@ export function AppRouter() {
           <Route path="/connections" element={<ConnectionsPage />} />
           <Route path="/cables" element={<CablesPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/access-management" element={<AccessManagementPage />} />
         </Route>
       </Routes>
     </Router>

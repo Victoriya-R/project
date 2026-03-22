@@ -12,14 +12,12 @@ import { PageHeader } from '../components/common/PageHeader';
 import { useApiQuery } from '../hooks/useApiQuery';
 import { CabinetFormModal } from '../modules/inventory/CabinetFormModal';
 import { switchCabinetsApi, zonesApi } from '../services/api/client';
-import { useAuthStore } from '../store/auth-store';
 import { SwitchCabinet } from '../types/entities';
 import { getApiErrorMessage } from '../utils/api-error';
 
 export function SwitchCabinetsPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const role = useAuthStore((state) => state.user?.role);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedCabinet, setSelectedCabinet] = useState<SwitchCabinet | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -76,7 +74,7 @@ export function SwitchCabinetsPage() {
         title={t('cabinet.title')}
         description={t('cabinet.description')}
         breadcrumbs={<Breadcrumbs items={[{ label: t('nav.dashboard'), href: '/' }, { label: t('nav.switchCabinets') }]} />}
-        actions={role === 'admin' ? <Button icon={<Plus className="h-4 w-4" />} onClick={() => { setSelectedCabinet(null); setSubmitError(null); setFormOpen(true); }}>{t('cabinet.create')}</Button> : undefined}
+        actions={<Button icon={<Plus className="h-4 w-4" />} onClick={() => { setSelectedCabinet(null); setSubmitError(null); setFormOpen(true); }}>{t('cabinet.create')}</Button>}
       />
       <MockBanner meta={cabinets.data?.meta} />
       <DataTable
@@ -90,12 +88,12 @@ export function SwitchCabinetsPage() {
           {
             key: 'actions',
             header: t('equipment.actions'),
-            render: (row) => role === 'admin' ? (
+            render: (row) => (
               <div className="flex gap-2">
                 <Button variant="ghost" className="px-2.5" onClick={() => { setSelectedCabinet(row); setSubmitError(null); setFormOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                 <Button variant="ghost" className="px-2.5" onClick={() => { setSelectedCabinet(row); setDeleteError(null); setDeleteOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
               </div>
-            ) : <span className="text-slate-400">—</span>
+            )
           }
         ]}
         data={cabinets.data?.data ?? []}

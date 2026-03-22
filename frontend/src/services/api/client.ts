@@ -2,6 +2,7 @@ import { api } from './http';
 import {
   ApiMeta,
   AuthUser,
+  ManagedUser,
   Cable,
   Connection,
   Equipment,
@@ -11,7 +12,6 @@ import {
   SwitchCabinet,
   SwitchCabinetReportRow,
   UpsEntity,
-  UserRole,
   Zone,
   ZoneLoadReportRow,
   ZoneReportRow
@@ -53,19 +53,20 @@ const getPortsByEquipment = (equipmentId: number) => mockPorts.filter((port) => 
 
 export const authApi = {
   async login(username: string, password: string): Promise<{ token: string; user: AuthUser; meta: ApiMeta }> {
-    try {
-      const { data } = await api.post<{ token: string }>('/users/login', { username, password });
-      const role: UserRole = username.includes('admin') ? 'admin' : 'user';
-      return { token: data.token, user: { username, role }, meta: liveMeta('/users/login') };
-    } catch {
-      const role: UserRole = username.includes('admin') ? 'admin' : 'analyst';
-      return {
-        token: 'mock-token',
-        user: { username: username || 'demo_user', role },
-        meta: mockMeta('/users/login', 'Auth fallback uses demo session because backend auth may be unavailable in local environment.')
-      };
-    }
+    const { data } = await api.post<{ token: string; user: AuthUser }>('/users/login', { username, password });
+    return { token: data.token, user: data.user, meta: liveMeta('/users/login') };
+  },
+  async me(): Promise<AuthUser> {
+    const { data } = await api.get<{ user: AuthUser }>('/users/me');
+    return data.user;
   }
+};
+
+export const accessManagementApi = {
+  list: async () => (await api.get<ManagedUser[]>('/users')).data,
+  create: async (payload: { username: string; password: string; role: 'admin' | 'user' }) => (await api.post<{ user: ManagedUser }>('/users/register', payload)).data,
+  update: async (id: number, payload: { username: string; password?: string; role: 'admin' | 'user' }) => (await api.put<{ user: ManagedUser }>(`/users/${id}`, payload)).data,
+  remove: async (id: number) => (await api.delete(`/users/${id}`)).data
 };
 
 export const dashboardApi = {

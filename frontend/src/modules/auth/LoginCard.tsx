@@ -5,6 +5,7 @@ import { useI18n } from '../../i18n/provider';
 import { useAuthStore } from '../../store/auth-store';
 import { Button } from '../../components/common/Button';
 import { FormField, TextInput } from '../../components/common/FormField';
+import { getApiErrorMessage } from '../../utils/api-error';
 
 export function LoginCard() {
   const { login } = useAuthStore();
@@ -13,14 +14,23 @@ export function LoginCard() {
   const [password, setPassword] = useState('12345');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
-    const result = await authApi.login(username, password);
-    login(result.token, result.user);
-    setMessage(result.meta.usingMock ? t('auth.demoFallback') : t('auth.backendLogin'));
-    setLoading(false);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const result = await authApi.login(username, password);
+      login(result.token, result.user);
+      setMessage(t('auth.backendLogin'));
+    } catch (submitError) {
+      setError(getApiErrorMessage(submitError, 'Не удалось выполнить вход. Проверьте логин, пароль и повторите попытку.'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -28,7 +38,6 @@ export function LoginCard() {
       <div className="mb-8 flex items-center gap-4">
         <div className="rounded-2xl bg-brand-50 p-3 text-brand-600"><ShieldCheck className="h-6 w-6" /></div>
         <div>
-
           <h1 className="text-2xl font-semibold text-slate-900">{t('auth.title')}</h1>
           <p className="mt-1 text-sm text-slate-500">{t('auth.subtitle')}</p>
         </div>
@@ -41,6 +50,7 @@ export function LoginCard() {
           <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
         </FormField>
         {message ? <div className="rounded-xl border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-700">{message}</div> : null}
+        {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
         <Button type="submit" className="w-full" disabled={loading}>{loading ? t('auth.signingIn') : t('auth.login')}</Button>
       </form>
       <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">

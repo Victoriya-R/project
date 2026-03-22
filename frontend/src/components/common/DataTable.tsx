@@ -7,7 +7,7 @@ export interface Column<T> {
   className?: string;
 }
 
-export function DataTable<T>({ columns, data }: { columns: Column<T>[]; data: T[] }) {
+export function DataTable<T>({ columns, data, getRowKey }: { columns: Column<T>[]; data: T[]; getRowKey?: (row: T, index: number) => string | number }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft">
       <div className="overflow-x-auto">
@@ -21,7 +21,7 @@ export function DataTable<T>({ columns, data }: { columns: Column<T>[]; data: T[
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
             {data.map((row, index) => (
-              <tr key={index} className="transition hover:bg-slate-50/70">
+              <tr key={getRowKey ? getRowKey(row, index) : index} className="transition hover:bg-slate-50/70">
                 {columns.map((column) => (
                   <td key={column.key} className={`px-4 py-3 align-top text-slate-700 ${column.className ?? ''}`}>{column.render(row)}</td>
                 ))}

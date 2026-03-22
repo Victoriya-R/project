@@ -11,7 +11,8 @@ const getUserByUsername = (username) => new Promise((resolve, reject) => {
     `SELECT u.id, u.username, u.password, u.email, u.is_superuser, r.name AS role_name
      FROM users u
      JOIN roles r ON r.id = u.role_id
-     WHERE u.username = ?`,
+     WHERE u.username = ?
+     ORDER BY u.is_superuser DESC, u.id ASC`,
     [username],
     (err, row) => (err ? reject(err) : resolve(row ?? null))
   );
@@ -38,6 +39,69 @@ const normalizeRegistrationPayload = (body = {}) => ({
   role: String(body.role ?? '').trim(),
   email: String(body.email ?? '').trim() || null
 });
+
+const mapManagedUser = (user) => ({
+  id: user.id,
+  username: user.username,
+  email: user.email,
+  role: user.role,
+  isSuperuser: Boolean(user.is_superuser)
+});
+
+const buildUserIdentityKey = (user) => {
+  const normalizedUsername = String(user.username ?? '').trim().toLowerCase();
+  const normalizedEmail = String(user.email ?? '').trim().toLowerCase();
+
+  if (Number.isInteger(user.id)) {
+    return `id:${user.id}`;
+  }
+
+  if (normalizedUsername) {
+    return `username:${normalizedUsername}`;
+  }
+
+  if (normalizedEmail) {
+    return `email:${normalizedEmail}`;
+  }
+
+  return JSON.stringify(user);
+};
+
+const dedupeUsers = (users) => {
+  const seenKeys = new Set();
+  const seenUsernames = new Set();
+  const seenEmails = new Set();
+
+  return users.filter((user) => {
+    const identityKey = buildUserIdentityKey(user);
+    const normalizedUsername = String(user.username ?? '').trim().toLowerCase();
+    const normalizedEmail = String(user.email ?? '').trim().toLowerCase();
+
+    if (seenKeys.has(identityKey)) {
+      return false;
+    }
+
+    if (normalizedUsername && seenUsernames.has(normalizedUsername)) {
+      return false;
+    }
+
+    if (normalizedEmail && seenEmails.has(normalizedEmail)) {
+      return false;
+    }
+
+    seenKeys.add(identityKey);
+
+    if (normalizedUsername) {
+      seenUsernames.add(normalizedUsername);
+    }
+
+    if (normalizedEmail) {
+      seenEmails.add(normalizedEmail);
+    }
+
+    return true;
+  });
+};
 
 export const createUser = async (req, res) => {
   const { username, password, role, email } = normalizeRegistrationPayload(req.body);
@@ -88,7 +152,7 @@ export const createUser = async (req, res) => {
     });
   } catch (error) {
     logger.error(`Error: Failed to register user ${username}. Error: ${error.message}`);
-      return res.status(500).json({ error: 'Ошибка при создании пользователя' });
+    return res.status(500).json({ error: 'Ошибка при создании пользователя' });
   }
 };
 
@@ -149,19 +213,13 @@ export const listUsers = async (_req, res) => {
         `SELECT u.id, u.username, u.email, u.is_superuser, r.name AS role
          FROM users u
          JOIN roles r ON r.id = u.role_id
-         ORDER BY u.is_superuser DESC, u.username ASC`,
+         ORDER BY u.is_superuser DESC, u.username ASC, u.id ASC`,
         [],
         (err, rows) => (err ? reject(err) : resolve(rows))
       );
     });
 
-    return res.status(200).json(users.map((user) => ({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      isSuperuser: Boolean(user.is_superuser)
-    })));
+    return res.status(200).json(dedupeUsers(users).map(mapManagedUser));
   } catch (error) {
     logger.error(`Error: Failed to list users. Error: ${error.message}`);
     return res.status(500).json({ error: 'Не удалось получить пользователей' });

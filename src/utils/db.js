@@ -21,10 +21,12 @@ const get = (sql, params = []) => new Promise((resolve, reject) => {
   db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row ?? null)));
 });
 
+const all = (sql, params = []) => new Promise((resolve, reject) => {
+  db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
+});
+
 const ensureColumn = async (tableName, columnName, definition) => {
-  const columns = await new Promise((resolve, reject) => {
-    db.all(`PRAGMA table_info(${tableName})`, [], (err, rows) => (err ? reject(err) : resolve(rows)));
-  });
+  const columns = await all(`PRAGMA table_info(${tableName})`);
 
   if (!columns.some((column) => column.name === columnName)) {
     await run(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
@@ -46,6 +48,63 @@ const createAssetsTable = async () => {
       owner_user_id INTEGER
     )
   `);
+};
+
+const createUniqueIndexIfMissing = async (indexName, tableName, columns) => {
+  const existing = await get(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?`, [indexName]);
+
+  if (!existing) {
+    await run(`CREATE UNIQUE INDEX ${indexName} ON ${tableName} (${columns})`);
+  }
+};
+
+const pickCanonicalUser = (users) => users
+  .slice()
+  .sort((left, right) => {
+    const superuserDelta = Number(right.is_superuser ?? 0) - Number(left.is_superuser ?? 0);
+    if (superuserDelta !== 0) {
+      return superuserDelta;
+    }
+
+    return Number(left.id) - Number(right.id);
+  })[0] ?? null;
+
+const removeDuplicateUsersByField = async (fieldName) => {
+  const duplicates = await all(
+    `SELECT ${fieldName} AS field_value
+     FROM users
+     WHERE ${fieldName} IS NOT NULL AND TRIM(${fieldName}) <> ''
+     GROUP BY LOWER(TRIM(${fieldName}))
+     HAVING COUNT(*) > 1`
+  );
+
+  for (const duplicate of duplicates) {
+    const users = await all(
+      `SELECT id, username, email, COALESCE(is_superuser, 0) AS is_superuser
+       FROM users
+       WHERE LOWER(TRIM(${fieldName})) = LOWER(TRIM(?))
+       ORDER BY COALESCE(is_superuser, 0) DESC, id ASC`,
+      [duplicate.field_value]
+    );
+
+    const canonicalUser = pickCanonicalUser(users);
+    const redundantUsers = users.filter((user) => user.id !== canonicalUser?.id);
+
+    for (const user of redundantUsers) {
+      await run('DELETE FROM users WHERE id = ?', [user.id]);
+    }
+  }
+};
+
+const normalizeSeedUsers = async () => {
+  await run(
+    `UPDATE users
+     SET email = username || '@local.dcim'
+     WHERE email IS NULL OR TRIM(email) = ''`
+  );
+
+  await removeDuplicateUsersByField('username');
+  await removeDuplicateUsersByField('email');
 };
 
 const ensureBaseSchema = async () => {
@@ -72,6 +131,10 @@ const ensureBaseSchema = async () => {
   await ensureColumn('switch_cabinets', 'owner_user_id', 'INTEGER');
   await ensureColumn('cables', 'owner_user_id', 'INTEGER');
   await ensureColumn('connections', 'owner_user_id', 'INTEGER');
+
+  await normalizeSeedUsers();
+  await createUniqueIndexIfMissing('users_username_unique_idx', 'users', 'username');
+  await createUniqueIndexIfMissing('users_email_unique_idx', 'users', 'email');
 };
 
 const ensureSeedData = async () => {

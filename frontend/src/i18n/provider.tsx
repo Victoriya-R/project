@@ -25,9 +25,9 @@ export function I18nProvider({ children }: PropsWithChildren) {
     language,
     setLanguage,
     t: (key, vars) => {
-      const template = messages[language][key as MessageKey] ?? messages.en[key as MessageKey] ?? key;
+      const template = String(messages[language][key as MessageKey] ?? messages.en[key as MessageKey] ?? key);
       if (!vars) return template;
-      return Object.entries(vars).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), template);
+      return Object.entries(vars).reduce<string>((result, [name, value]) => result.split(`{${name}}`).join(String(value)), template);
     }
   }), [language]);
 

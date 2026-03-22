@@ -1,13 +1,39 @@
-
+import { useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowRight, PlugZap, Trash2 } from 'lucide-react';
+import { Button } from '../../components/common/Button';
+import { FormField, SelectInput } from '../../components/common/FormField';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { useApiQuery } from '../../hooks/useApiQuery';
 import { useI18n } from '../../i18n/provider';
+import { equipmentApi } from '../../services/api/client';
+import { useAuthStore } from '../../store/auth-store';
 import { Equipment, SwitchCabinet } from '../../types/entities';
 import { formatNumber, formatPercent } from '../../utils/format';
-import { StatusBadge } from '../../components/common/StatusBadge';
+import { getApiErrorMessage } from '../../utils/api-error';
 
-function RackUnit({ item, unit }: { item?: Equipment; unit: number }) {
+function RackUnit({
+  item,
+  unit,
+  active,
+  canManage,
+  onSelect,
+  onRemove
+}: {
+  item?: Equipment;
+  unit: number;
+  active: boolean;
+  canManage: boolean;
+  onSelect: () => void;
+  onRemove: () => void;
+}) {
   const { t } = useI18n();
   return (
-    <div className={`grid grid-cols-[56px_1fr] items-center gap-3 rounded-xl border p-2 ${item ? 'border-brand-100 bg-brand-50/60' : 'border-slate-200 bg-white'}`}>
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`grid w-full grid-cols-[56px_1fr_auto] items-center gap-3 rounded-xl border p-2 text-left transition ${item ? 'border-brand-100 bg-brand-50/60' : 'border-slate-200 bg-white'} ${active ? 'ring-2 ring-brand-500' : ''}`}
+    >
       <div className="rounded-lg bg-slate-950 px-2 py-2 text-center text-xs font-semibold text-white">U{unit}</div>
       {item ? (
         <div className="min-w-0">
@@ -19,17 +45,73 @@ function RackUnit({ item, unit }: { item?: Equipment; unit: number }) {
         </div>
       ) : (
         <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t('cabinet.availableSlot')}</p>
-
       )}
-    </div>
+      {item && canManage ? (
+        <span
+          className="rounded-lg p-2 text-slate-500 hover:bg-white hover:text-rose-600"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </span>
+      ) : null}
+    </button>
   );
 }
 
 export function RackVisualizer({ cabinet }: { cabinet: SwitchCabinet }) {
   const { t } = useI18n();
+  const role = useAuthStore((state) => state.user?.role);
+  const queryClient = useQueryClient();
+  const [selectedUnit, setSelectedUnit] = useState<number | null>(null);
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
+  const [placementError, setPlacementError] = useState<string | null>(null);
+  const [placementSuccess, setPlacementSuccess] = useState<string | null>(null);
+  const equipmentQuery = useApiQuery({ queryKey: ['equipment'], queryFn: equipmentApi.list });
+  const canManage = role === 'admin';
+
   const units = Array.from({ length: 12 }).map((_, index) => ({ unit: 12 - index, equipment: cabinet.equipment?.[index] }));
   const currentWeight = cabinet.equipment?.reduce((sum, item) => sum + Number(item.weight ?? 0), 0) ?? 0;
   const currentEnergy = cabinet.equipment?.reduce((sum, item) => sum + Number(item.energy_consumption ?? 0), 0) ?? 0;
+  const unassignedEquipment = useMemo(() => (equipmentQuery.data?.data ?? []).filter((item) => !item.switch_cabinet_id), [equipmentQuery.data]);
+
+  const invalidate = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['cabinet-detail', String(cabinet.id)] }),
+      queryClient.invalidateQueries({ queryKey: ['cabinet-list'] }),
+      queryClient.invalidateQueries({ queryKey: ['equipment'] }),
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    ]);
+  };
+
+  const placeMutation = useMutation({
+    mutationFn: () => equipmentApi.placeInCabinet(Number(selectedEquipmentId), cabinet.id),
+    onSuccess: async () => {
+      setPlacementError(null);
+      setPlacementSuccess(t('cabinet.placeSuccess'));
+      setSelectedEquipmentId('');
+      await invalidate();
+    },
+    onError: (error) => {
+      setPlacementSuccess(null);
+      setPlacementError(getApiErrorMessage(error, t('crud.error.save')));
+    }
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (equipmentId: number) => equipmentApi.removeFromCabinet(equipmentId),
+    onSuccess: async () => {
+      setPlacementError(null);
+      setPlacementSuccess(t('cabinet.removeSuccess'));
+      await invalidate();
+    },
+    onError: (error) => {
+      setPlacementSuccess(null);
+      setPlacementError(getApiErrorMessage(error, t('crud.error.delete')));
+    }
+  });
 
   return (
     <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
@@ -40,7 +122,21 @@ export function RackVisualizer({ cabinet }: { cabinet: SwitchCabinet }) {
             <span>{cabinet.serial_number}</span>
           </div>
           <div className="space-y-2">
-            {units.map((slot) => <RackUnit key={slot.unit} unit={slot.unit} item={slot.equipment} />)}
+            {units.map((slot) => (
+              <RackUnit
+                key={slot.unit}
+                unit={slot.unit}
+                item={slot.equipment}
+                active={selectedUnit === slot.unit}
+                canManage={canManage}
+                onSelect={() => {
+                  setSelectedUnit(slot.unit);
+                  setPlacementError(null);
+                  setPlacementSuccess(null);
+                }}
+                onRemove={() => slot.equipment && removeMutation.mutate(slot.equipment.id)}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -59,6 +155,42 @@ export function RackVisualizer({ cabinet }: { cabinet: SwitchCabinet }) {
               <p className="mt-2 text-xs text-slate-500">{t('cabinet.load', { value: formatPercent((currentEnergy / cabinet.energy_limit) * 100) })}</p>
             </div>
           </div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+          <h3 className="text-lg font-semibold text-slate-900">{t('cabinet.placementTitle')}</h3>
+          <p className="mt-2 text-sm text-slate-500">{t('cabinet.placementDescription')}</p>
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField label={t('cabinet.selectedSlot')}>
+                <div className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900">{selectedUnit ? `U${selectedUnit}` : t('cabinet.selectSlotPrompt')}</div>
+              </FormField>
+              <FormField label={t('cabinet.availableEquipment')}>
+                <SelectInput value={selectedEquipmentId} onChange={(event) => setSelectedEquipmentId(event.target.value)} disabled={!canManage}>
+                  <option value="">{t('common.select')}</option>
+                  {unassignedEquipment.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.model}</option>)}
+                </SelectInput>
+              </FormField>
+            </div>
+            <Button
+              icon={<ArrowRight className="h-4 w-4" />}
+              disabled={!canManage || !selectedUnit || !selectedEquipmentId || placeMutation.isPending}
+              onClick={() => {
+                setPlacementError(null);
+                setPlacementSuccess(null);
+                placeMutation.mutate();
+              }}
+            >
+              {t('cabinet.placeEquipment')}
+            </Button>
+          </div>
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <div className="flex items-start gap-3">
+              <PlugZap className="mt-0.5 h-4 w-4 text-brand-600" />
+              <p>{t('cabinet.slotApiHint')}</p>
+            </div>
+          </div>
+          {placementError ? <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{placementError}</div> : null}
+          {placementSuccess ? <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{placementSuccess}</div> : null}
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
           <h3 className="text-lg font-semibold text-slate-900">{t('cabinet.warnings')}</h3>

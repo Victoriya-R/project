@@ -70,6 +70,32 @@ function UserFormModal({
   );
 }
 
+const buildUserDedupKey = (managedUser: ManagedUser) => managedUser.id;
+
+const dedupeUsers = (users: ManagedUser[]) => {
+  const seenIds = new Set<number>();
+  const seenUsernames = new Set<string>();
+  const seenEmails = new Set<string>();
+
+  return users.filter((managedUser) => {
+    const normalizedUsername = managedUser.username.trim().toLowerCase();
+    const normalizedEmail = managedUser.email?.trim().toLowerCase();
+
+    if (seenIds.has(managedUser.id) || seenUsernames.has(normalizedUsername) || (normalizedEmail ? seenEmails.has(normalizedEmail) : false)) {
+      return false;
+    }
+
+    seenIds.add(managedUser.id);
+    seenUsernames.add(normalizedUsername);
+
+    if (normalizedEmail) {
+      seenEmails.add(normalizedEmail);
+    }
+
+    return true;
+  });
+};
+
 export function AccessManagementPage() {
   const user = useAuthStore((state) => state.user);
   const isSuperuser = Boolean(user?.isSuperuser);
@@ -123,7 +149,7 @@ export function AccessManagementPage() {
     onError: (error) => setDeleteError(getApiErrorMessage(error, 'Не удалось удалить пользователя.'))
   });
 
-  const tableData = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
+  const tableData = useMemo(() => dedupeUsers(usersQuery.data ?? []), [usersQuery.data]);
 
   return (
     <div className="space-y-6">
@@ -144,6 +170,7 @@ export function AccessManagementPage() {
             После регистрации новый пользователь получает логин и пароль и работает только со своей инфраструктурой. Роль назначается сразу при создании.
           </div>
           <DataTable
+            getRowKey={buildUserDedupKey}
             columns={[
               { key: 'username', header: 'Логин', render: (row) => <div><p className="font-semibold text-slate-900">{row.username}</p><p className="text-xs text-slate-500">{row.email ?? '—'}</p></div> },
               { key: 'role', header: 'Роль', render: (row) => row.isSuperuser ? 'superuser' : row.role },

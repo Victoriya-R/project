@@ -56,6 +56,37 @@ async function withFallback<T>(endpoint: string, request: () => Promise<T>, fall
 const deriveRecentActivity = (): RecentActivity[] => mockRecentActivity;
 const getPortsByEquipment = (equipmentId: number) => mockPorts.filter((port) => port.equipment_id === equipmentId);
 
+const buildManagedUserIdentity = (user: ManagedUser) => {
+  const normalizedUsername = user.username.trim().toLowerCase();
+  const normalizedEmail = user.email?.trim().toLowerCase();
+
+  return normalizedUsername || normalizedEmail || String(user.id);
+};
+
+const dedupeManagedUsers = (users: ManagedUser[]) => {
+  const seenIds = new Set<number>();
+  const seenIdentities = new Set<string>();
+  const seenEmails = new Set<string>();
+
+  return users.filter((user) => {
+    const identity = buildManagedUserIdentity(user);
+    const normalizedEmail = user.email?.trim().toLowerCase();
+
+    if (seenIds.has(user.id) || seenIdentities.has(identity) || (normalizedEmail ? seenEmails.has(normalizedEmail) : false)) {
+      return false;
+    }
+
+    seenIds.add(user.id);
+    seenIdentities.add(identity);
+
+    if (normalizedEmail) {
+      seenEmails.add(normalizedEmail);
+    }
+
+    return true;
+  });
+};
+
 export const authApi = {
   async login(username: string, password: string): Promise<{ token: string; user: AuthUser; meta: ApiMeta }> {
     const { data } = await api.post<{ token: string; user: AuthUser }>('/users/login', { username, password });
@@ -68,7 +99,7 @@ export const authApi = {
 };
 
 export const accessManagementApi = {
-  list: async () => (await api.get<ManagedUser[]>('/users')).data,
+  list: async () => dedupeManagedUsers((await api.get<ManagedUser[]>('/users')).data),
   create: async (payload: { username: string; password: string; role: 'admin' | 'user' }) => (await api.post<{ user: ManagedUser }>('/users', payload)).data,
   update: async (id: number, payload: { username: string; password?: string; role: 'admin' | 'user' }) => (await api.put<{ user: ManagedUser }>(`/users/${id}`, payload)).data,
   remove: async (id: number) => (await api.delete(`/users/${id}`)).data

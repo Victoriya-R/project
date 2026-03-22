@@ -28,6 +28,7 @@ function AuthLoader() {
 
 function AuthBootstrap() {
   const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const logout = useAuthStore((state) => state.logout);
   const setAuthCheckInProgress = useAuthStore((state) => state.setAuthCheckInProgress);
@@ -36,6 +37,9 @@ function AuthBootstrap() {
     let cancelled = false;
 
     if (!token) {
+      if (user) {
+        setUser(null);
+      }
       setAuthCheckInProgress(false);
       return () => {
         cancelled = true;
@@ -45,9 +49,9 @@ function AuthBootstrap() {
     setAuthCheckInProgress(true);
 
     authApi.me()
-      .then((user) => {
+      .then((currentUser) => {
         if (!cancelled) {
-          setUser(user);
+          setUser(currentUser);
         }
       })
       .catch(() => {
@@ -64,20 +68,21 @@ function AuthBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [token, logout, setAuthCheckInProgress, setUser]);
+  }, [logout, setAuthCheckInProgress, setUser, token, user]);
 
   return null;
 }
 
 function PublicOnlyRoute() {
   const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const isAuthCheckInProgress = useAuthStore((state) => state.isAuthCheckInProgress);
 
   if (isAuthCheckInProgress) {
     return <AuthLoader />;
   }
 
-  if (token) {
+  if (token && user) {
     return <Navigate to="/" replace />;
   }
 
@@ -86,13 +91,14 @@ function PublicOnlyRoute() {
 
 function ProtectedLayout() {
   const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const isAuthCheckInProgress = useAuthStore((state) => state.isAuthCheckInProgress);
 
   if (isAuthCheckInProgress) {
     return <AuthLoader />;
   }
 
-  if (!token) {
+  if (!token || !user) {
     return <Navigate to="/login" replace />;
   }
 

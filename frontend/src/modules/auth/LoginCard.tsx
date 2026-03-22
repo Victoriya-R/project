@@ -12,8 +12,8 @@ export function LoginCard() {
   const { login } = useAuthStore();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [username, setUsername] = useState('admin_1');
-  const [password, setPassword] = useState('12345');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,10 +55,10 @@ export function LoginCard() {
       </div>
       <form className="space-y-4" onSubmit={onSubmit}>
         <FormField label={t('auth.username')}>
-          <TextInput value={username} onChange={(e) => setUsername(e.target.value)} placeholder="admin_1" />
+          <TextInput value={username} onChange={(e) => setUsername(e.target.value)} placeholder="admin_1" autoComplete="username" />
         </FormField>
         <FormField label={t('auth.password')}>
-          <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+          <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" />
         </FormField>
         {message ? <div className="rounded-xl border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-700">{message}</div> : null}
         {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}

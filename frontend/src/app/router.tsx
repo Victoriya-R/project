@@ -28,7 +28,6 @@ function AuthLoader() {
 
 function AuthBootstrap() {
   const token = useAuthStore((state) => state.token);
-  const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const logout = useAuthStore((state) => state.logout);
   const setAuthCheckInProgress = useAuthStore((state) => state.setAuthCheckInProgress);
@@ -37,9 +36,6 @@ function AuthBootstrap() {
     let cancelled = false;
 
     if (!token) {
-      if (user) {
-        setUser(null);
-      }
       setAuthCheckInProgress(false);
       return () => {
         cancelled = true;
@@ -68,7 +64,7 @@ function AuthBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [logout, setAuthCheckInProgress, setUser, token, user]);
+  }, [logout, setAuthCheckInProgress, setUser, token]);
 
   return null;
 }

@@ -20,7 +20,16 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const authStore = useAuthStore.getState();
       if (authStore.token) {
+        const backendMessage = typeof error.response?.data?.error === 'string'
+          ? error.response.data.error
+          : 'Сессия истекла или токен недействителен. Выполните вход повторно.';
+
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem('dcim_auth_error', backendMessage);
+        }
+
         authStore.logout();
+
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
           window.location.assign('/login');
         }

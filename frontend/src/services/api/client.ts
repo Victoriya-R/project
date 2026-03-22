@@ -104,8 +104,8 @@ export const equipmentApi = {
   list: () => withFallback<Equipment[]>('/equipment', async () => (await api.get('/equipment')).data, () => mockEquipment, 'Equipment list fallback uses local fixtures until API is populated.'),
   detail: (id: number) => withFallback<Equipment>('/equipment/:id', async () => (await api.get(`/equipment/${id}`)).data, () => mockEquipment.find((item) => item.id === id) ?? mockEquipment[0], 'Equipment detail fallback uses local fixtures.'),
   ports: (equipmentId: number) => withFallback<Port[]>('/equipment/ports', async () => (await api.get('/equipment/ports', { params: { equipment_id: equipmentId } })).data, () => getPortsByEquipment(equipmentId), 'Ports endpoint fallback uses generated demo ports.'),
-  create: async (payload: Partial<Equipment>) => api.post('/equipment', payload),
-  update: async (id: number, payload: Partial<Equipment>) => api.put(`/equipment/${id}`, payload),
+  create: async (payload: object) => api.post('/equipment', payload),
+  update: async (id: number, payload: object) => api.put(`/equipment/${id}`, payload),
   remove: async (id: number) => api.delete(`/equipment/${id}`),
   placeInCabinet: async (equipment_id: number, switch_cabinet_id: number) => api.put('/equipment/placeInSwitchCabinet', { equipment_id, switch_cabinet_id }),
   removeFromCabinet: async (equipment_id: number) => api.put('/equipment/removeFromSwitchCabinet', { equipment_id })
@@ -118,24 +118,24 @@ export const upsApi = {
   }, () => mockUps, 'UPS list endpoint is not explicitly available in backend, so UI derives it or falls back to fixtures.'),
   detail: (id: number) => withFallback<UpsEntity>('/equipment/ups/:id', async () => (await api.get(`/equipment/ups/${id}`)).data, () => mockUps.find((item) => item.id === id) ?? mockUps[0], 'UPS detail fallback uses local fixtures.'),
   ports: (equipmentId: number) => withFallback<Port[]>('/equipment/ups/:id/ports', async () => (await api.get(`/equipment/ups/${equipmentId}/ports`, { params: { equipment_id: equipmentId } })).data, () => getPortsByEquipment(equipmentId), 'UPS ports fallback uses local fixtures.'),
-  create: async (payload: Partial<UpsEntity>) => api.post('/equipment/ups', payload),
-  update: async (id: number, payload: Partial<UpsEntity>) => api.put(`/equipment/ups/${id}`, payload),
+  create: async (payload: object) => api.post('/equipment/ups', payload),
+  update: async (id: number, payload: object) => api.put(`/equipment/ups/${id}`, payload),
   remove: async (id: number) => api.delete(`/equipment/ups/${id}`)
 };
 
 export const switchCabinetsApi = {
   list: () => withFallback<SwitchCabinet[]>('/equipment/switch_cabinets', async () => (await api.get('/equipment/switch_cabinets')).data, () => mockCabinets, 'Switch cabinet list fallback uses local fixtures.'),
   detail: (id: number) => withFallback<SwitchCabinet>('/equipment/switch_cabinets/:id', async () => (await api.get(`/equipment/switch_cabinets/${id}`)).data, () => mockCabinets.find((item) => item.id === id) ?? mockCabinets[0], 'Switch cabinet detail fallback uses local fixtures.'),
-  create: async (payload: Partial<SwitchCabinet>) => api.post('/equipment/switch_cabinets', payload),
-  update: async (id: number, payload: Partial<SwitchCabinet>) => api.put(`/equipment/switch_cabinets/${id}`, payload),
+  create: async (payload: object) => api.post('/equipment/switch_cabinets', payload),
+  update: async (id: number, payload: object) => api.put(`/equipment/switch_cabinets/${id}`, payload),
   remove: async (id: number) => api.delete(`/equipment/switch_cabinets/${id}`)
 };
 
 export const zonesApi = {
   list: () => withFallback<Zone[]>('/equipment/zones', async () => (await api.get('/equipment/zones')).data, () => mockZones, 'Zones list fallback uses local fixtures.'),
   detail: (id: number) => withFallback<Zone>('/equipment/zones/:id', async () => (await api.get(`/equipment/zones/${id}`)).data, () => mockZones.find((item) => item.id === id) ?? mockZones[0], 'Zone detail fallback uses local fixtures.'),
-  create: async (payload: Partial<Zone>) => api.post('/equipment/zones', payload),
-  update: async (id: number, payload: Partial<Zone>) => api.put(`/equipment/zones/${id}`, payload),
+  create: async (payload: object) => api.post('/equipment/zones', payload),
+  update: async (id: number, payload: object) => api.put(`/equipment/zones/${id}`, payload),
   remove: async (id: number) => api.delete(`/equipment/zones/${id}`)
 };
 

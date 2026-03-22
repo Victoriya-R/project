@@ -39,7 +39,7 @@ const normalizeRegistrationPayload = (body = {}) => ({
   email: String(body.email ?? '').trim() || null
 });
 
-export const registerUser = async (req, res) => {
+export const createUser = async (req, res) => {
   const { username, password, role, email } = normalizeRegistrationPayload(req.body);
 
   if (!username || !password || !role) {
@@ -78,7 +78,7 @@ export const registerUser = async (req, res) => {
     logger.info(`Success: User ${username} created by superuser ${req.user?.username}`);
 
     return res.status(201).json({
-      message: 'Пользователь успешно зарегистрирован',
+      message: 'Пользователь успешно создан',
       user: {
         id: userId,
         username,
@@ -88,9 +88,11 @@ export const registerUser = async (req, res) => {
     });
   } catch (error) {
     logger.error(`Error: Failed to register user ${username}. Error: ${error.message}`);
-    return res.status(500).json({ error: 'Ошибка при регистрации пользователя' });
+      return res.status(500).json({ error: 'Ошибка при создании пользователя' });
   }
 };
+
+export const registerUser = createUser;
 
 export const loginUser = async (req, res) => {
   const username = String(req.body?.username ?? '').trim();

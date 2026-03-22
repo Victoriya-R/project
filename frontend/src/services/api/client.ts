@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { api } from './http';
 import {
   ApiMeta,
@@ -43,7 +44,11 @@ async function withFallback<T>(endpoint: string, request: () => Promise<T>, fall
   try {
     const data = await request();
     return { data, meta: liveMeta(endpoint) };
-  } catch {
+  } catch (error) {
+    if (axios.isAxiosError(error) && [401, 403].includes(error.response?.status ?? 0)) {
+      throw error;
+    }
+
     return { data: fallback(), meta: mockMeta(endpoint, reason) };
   }
 }
@@ -64,7 +69,7 @@ export const authApi = {
 
 export const accessManagementApi = {
   list: async () => (await api.get<ManagedUser[]>('/users')).data,
-  create: async (payload: { username: string; password: string; role: 'admin' | 'user' }) => (await api.post<{ user: ManagedUser }>('/users/register', payload)).data,
+  create: async (payload: { username: string; password: string; role: 'admin' | 'user' }) => (await api.post<{ user: ManagedUser }>('/users', payload)).data,
   update: async (id: number, payload: { username: string; password?: string; role: 'admin' | 'user' }) => (await api.put<{ user: ManagedUser }>(`/users/${id}`, payload)).data,
   remove: async (id: number) => (await api.delete(`/users/${id}`)).data
 };

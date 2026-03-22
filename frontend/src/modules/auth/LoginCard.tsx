@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { authApi } from '../../services/api/client';
 import { useI18n } from '../../i18n/provider';
 import { useAuthStore } from '../../store/auth-store';
@@ -10,11 +11,20 @@ import { getApiErrorMessage } from '../../utils/api-error';
 export function LoginCard() {
   const { login } = useAuthStore();
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [username, setUsername] = useState('admin_1');
   const [password, setPassword] = useState('12345');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const authError = sessionStorage.getItem('dcim_auth_error');
+    if (authError) {
+      setError(authError);
+      sessionStorage.removeItem('dcim_auth_error');
+    }
+  }, []);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -26,6 +36,7 @@ export function LoginCard() {
       const result = await authApi.login(username, password);
       login(result.token, result.user);
       setMessage(t('auth.backendLogin'));
+      navigate('/', { replace: true });
     } catch (submitError) {
       setError(getApiErrorMessage(submitError, 'Не удалось выполнить вход. Проверьте логин, пароль и повторите попытку.'));
     } finally {

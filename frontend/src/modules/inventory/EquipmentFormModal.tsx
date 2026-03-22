@@ -15,6 +15,8 @@ interface EquipmentFormState {
   server_memory_slots: string;
   server_cpu: string;
   server_os: string;
+  server_ports: string;
+  server_port_type: 'patch' | 'power';
   patch_ports: string;
   patch_port_type: 'patch' | 'power';
   ups_capacity: string;
@@ -31,6 +33,8 @@ const defaultState: EquipmentFormState = {
   server_memory_slots: '',
   server_cpu: '',
   server_os: '',
+  server_ports: '',
+  server_port_type: 'patch',
   patch_ports: '',
   patch_port_type: 'patch',
   ups_capacity: '',
@@ -55,6 +59,8 @@ function toFormState(entity?: Equipment | UpsEntity | null): EquipmentFormState 
     server_memory_slots: '',
     server_cpu: '',
     server_os: '',
+    server_ports: '',
+    server_port_type: 'patch',
     patch_ports: '',
     patch_port_type: 'patch',
     ups_capacity: 'upsData' in entity ? String(entity.upsData.capacity ?? '') : '',
@@ -98,6 +104,7 @@ export function EquipmentFormModal({
     server_memory_slots: mode === 'create' && form.type === 'server' && !isPositiveNumber(form.server_memory_slots) ? t('crud.validation.positiveNumber') : '',
     server_cpu: mode === 'create' && form.type === 'server' && !form.server_cpu.trim() ? t('crud.validation.required') : '',
     server_os: mode === 'create' && form.type === 'server' && !form.server_os.trim() ? t('crud.validation.required') : '',
+    server_ports: mode === 'create' && form.type === 'server' && !isPositiveNumber(form.server_ports) ? t('crud.validation.positiveNumber') : '',
     patch_ports: mode === 'create' && form.type === 'patchPanel' && !isPositiveNumber(form.patch_ports) ? t('crud.validation.positiveNumber') : '',
     ups_capacity: form.type === 'ups' && !isPositiveNumber(form.ups_capacity) ? t('crud.validation.positiveNumber') : '',
     ups_battery_life: form.type === 'ups' && !isPositiveNumber(form.ups_battery_life) ? t('crud.validation.positiveNumber') : ''
@@ -163,6 +170,15 @@ export function EquipmentFormModal({
             </FormField>
             <FormField label={t('equipment.form.serverOs')} error={touched ? errors.server_os : undefined}>
               <TextInput value={form.server_os} onChange={(e) => setField('server_os', e.target.value)} placeholder="Ubuntu 24.04 LTS" disabled={mode === 'edit'} />
+            </FormField>
+            <FormField label={t('equipment.form.serverPorts')} error={touched ? errors.server_ports : undefined}>
+              <TextInput type="number" min="1" value={form.server_ports} onChange={(e) => setField('server_ports', e.target.value)} placeholder="4" disabled={mode === 'edit'} />
+            </FormField>
+            <FormField label={t('equipment.form.serverPortType')}>
+              <SelectInput value={form.server_port_type} onChange={(e) => setField('server_port_type', e.target.value)} disabled={mode === 'edit'}>
+                <option value="patch">Patch</option>
+                <option value="power">Power</option>
+              </SelectInput>
             </FormField>
           </div>
         ) : null}

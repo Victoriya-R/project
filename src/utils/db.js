@@ -50,6 +50,131 @@ const createAssetsTable = async () => {
   `);
 };
 
+const createZonesTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS zones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      address TEXT,
+      phone TEXT,
+      employee TEXT,
+      site TEXT,
+      owner_user_id INTEGER
+    )
+  `);
+};
+
+const createSwitchCabinetsTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS switch_cabinets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      weight INTEGER NOT NULL,
+      energy_consumption INTEGER NOT NULL DEFAULT 0,
+      energy_limit INTEGER NOT NULL,
+      employee TEXT,
+      zone_id INTEGER,
+      description TEXT,
+      isDataCenterEquipment INTEGER DEFAULT 1,
+      serial_number TEXT NOT NULL,
+      owner_user_id INTEGER
+    )
+  `);
+};
+
+const createUpsTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS ups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      asset_id INTEGER NOT NULL UNIQUE,
+      capacity INTEGER NOT NULL,
+      battery_life INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      FOREIGN KEY(asset_id) REFERENCES assets(id) ON DELETE CASCADE
+    )
+  `);
+};
+
+const createPortsTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS ports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      equipment_id INTEGER NOT NULL,
+      port_type TEXT NOT NULL,
+      port_number INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'available',
+      cable_type TEXT NOT NULL,
+      FOREIGN KEY(equipment_id) REFERENCES assets(id) ON DELETE CASCADE
+    )
+  `);
+};
+
+const createCablesTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS cables (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,
+      length INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      equipment_type_allowed TEXT NOT NULL,
+      owner_user_id INTEGER
+    )
+  `);
+};
+
+const createConnectionsTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS connections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cable_id INTEGER NOT NULL,
+      a_port_id INTEGER NOT NULL,
+      b_port_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      owner_user_id INTEGER,
+      FOREIGN KEY(cable_id) REFERENCES cables(id) ON DELETE CASCADE,
+      FOREIGN KEY(a_port_id) REFERENCES ports(id) ON DELETE CASCADE,
+      FOREIGN KEY(b_port_id) REFERENCES ports(id) ON DELETE CASCADE
+    )
+  `);
+};
+
+const rebuildPortsTableIfNeeded = async () => {
+  const columns = await all(`PRAGMA table_info(ports)`);
+  const hasPrimaryKey = columns.some((column) => column.name === 'id' && Number(column.pk) === 1);
+
+  if (hasPrimaryKey) {
+    return;
+  }
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS ports__migration (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      equipment_id INTEGER NOT NULL,
+      port_type TEXT NOT NULL,
+      port_number INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'available',
+      cable_type TEXT NOT NULL,
+      FOREIGN KEY(equipment_id) REFERENCES assets(id) ON DELETE CASCADE
+    )
+  `);
+
+  await run(`
+    INSERT INTO ports__migration (id, equipment_id, port_type, port_number, status, cable_type)
+    SELECT
+      COALESCE(NULLIF(id, ''), rowid),
+      equipment_id,
+      port_type,
+      port_number,
+      COALESCE(status, 'available'),
+      cable_type
+    FROM ports
+  `);
+
+  await run(`DROP TABLE ports`);
+  await run(`ALTER TABLE ports__migration RENAME TO ports`);
+};
+
 const createUniqueIndexIfMissing = async (indexName, tableName, columns) => {
   const existing = await get(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?`, [indexName]);
 
@@ -124,6 +249,13 @@ const ensureBaseSchema = async () => {
   )`);
 
   await createAssetsTable();
+  await createZonesTable();
+  await createSwitchCabinetsTable();
+  await createUpsTable();
+  await createPortsTable();
+  await createCablesTable();
+  await createConnectionsTable();
+  await rebuildPortsTableIfNeeded();
 
   await ensureColumn('users', 'is_superuser', 'INTEGER NOT NULL DEFAULT 0');
   await ensureColumn('assets', 'owner_user_id', 'INTEGER');
@@ -131,6 +263,7 @@ const ensureBaseSchema = async () => {
   await ensureColumn('switch_cabinets', 'owner_user_id', 'INTEGER');
   await ensureColumn('cables', 'owner_user_id', 'INTEGER');
   await ensureColumn('connections', 'owner_user_id', 'INTEGER');
+  await ensureColumn('connections', 'status', `TEXT NOT NULL DEFAULT 'active'`);
 
   await normalizeSeedUsers();
   await createUniqueIndexIfMissing('users_username_unique_idx', 'users', 'username');

@@ -21,6 +21,7 @@ import {
     deleteCable,
     createConnection, 
     getConnections,
+    getConnectionById,
     getPortsForEquipment,
     updateConnection,
     deleteConnection,
@@ -289,6 +290,7 @@ router.post('/connections', createConnection);
  *         description: Список соединений
  */
 router.get('/connections', getConnections);
+router.get('/connections/:id', getConnectionById);
 
 /**
  * @swagger

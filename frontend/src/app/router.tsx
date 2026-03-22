@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Navigate, Outlet, Route, Routes } from 'react-
 import { AppShell } from '../components/layout/AppShell';
 import { CablesPage } from '../pages/CablesPage';
 import { ConnectionsPage } from '../pages/ConnectionsPage';
+import { ConnectionDetailPage } from '../pages/ConnectionDetailPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { EquipmentDetailPage } from '../pages/EquipmentDetailPage';
 import { EquipmentPage } from '../pages/EquipmentPage';
@@ -124,6 +125,7 @@ export function AppRouter() {
           <Route path="/zones" element={<ZonesPage />} />
           <Route path="/zones/:id" element={<ZoneDetailPage />} />
           <Route path="/connections" element={<ConnectionsPage />} />
+          <Route path="/connections/:id" element={<ConnectionDetailPage />} />
           <Route path="/cables" element={<CablesPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/access-management" element={<AccessManagementPage />} />

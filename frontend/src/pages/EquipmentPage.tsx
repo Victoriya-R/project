@@ -75,7 +75,9 @@ export function EquipmentPage() {
           ip_address: payload.server_ip_address,
           memory_slots: Number(payload.server_memory_slots),
           cpu: payload.server_cpu,
-          os: payload.server_os
+          os: payload.server_os,
+          number_of_ports: Number(payload.server_ports),
+          port_type: payload.server_port_type
         } : undefined,
         patchPanelData: payload.type === 'patchPanel' ? {
           number_of_ports: Number(payload.patch_ports),

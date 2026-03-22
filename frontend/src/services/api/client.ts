@@ -194,6 +194,7 @@ export const cablesApi = {
 
 export const connectionsApi = {
   list: () => withFallback<Connection[]>('/equipment/connections', async () => (await api.get('/equipment/connections')).data, () => mockConnections, 'Connections list fallback uses local fixtures.'),
+  detail: (id: number) => withFallback<Connection>('/equipment/connections/:id', async () => (await api.get(`/equipment/connections/${id}`)).data, () => mockConnections.find((item) => item.id === id) ?? mockConnections[0], 'Connection detail fallback uses local fixtures.'),
   create: async (payload: Partial<Connection>) => api.post('/equipment/connections', payload),
   update: async (id: number, payload: Partial<Connection>) => api.put(`/equipment/connections/${id}`, payload),
   remove: async (id: number) => api.delete(`/equipment/connections/${id}`),

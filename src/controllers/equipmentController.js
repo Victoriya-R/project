@@ -196,7 +196,7 @@ export const getPortsForEquipment = async (req, res) => {
 
   try {
     const query = `
-      SELECT id, port_type, port_number, status, cable_type
+      SELECT id, equipment_id, port_type, port_number, status, cable_type
       FROM ports
       WHERE equipment_id = ?
     `;
@@ -230,52 +230,131 @@ export const getPortsForEquipment = async (req, res) => {
   }
 };
 
-//валидация портов
-export const validatePortsForConnection = async (a_port_id, b_port_id, ownerUserId) => {
-  // Получаем типы портов для каждого порта и их кабели
-  const query = `
-    SELECT p1.port_type AS port_a_type, p2.port_type AS port_b_type, 
-           p1.cable_type AS cable_a, p2.cable_type AS cable_b
-    FROM ports p1
-    JOIN ports p2 ON p1.id = ? AND p2.id = ?
-    JOIN assets a1 ON a1.id = p1.equipment_id
-    JOIN assets a2 ON a2.id = p2.equipment_id
-    WHERE a1.owner_user_id = ? AND a2.owner_user_id = ?
-  `;
+const getConnectionByIdForOwner = async (connectionId, ownerUserId) => new Promise((resolve, reject) => {
+  db.get(
+    `SELECT * FROM connections WHERE id = ? AND owner_user_id = ?`,
+    [connectionId, ownerUserId],
+    (err, row) => (err ? reject(err) : resolve(row ?? null))
+  );
+});
 
-  return new Promise((resolve, reject) => {
-    db.get(query, [a_port_id, b_port_id, ownerUserId, ownerUserId], (err, row) => {
-      if (err) return reject(new Error('Ошибка при получении данных портов'));
+const updatePortStatuses = async (portIds, status) => {
+  if (!portIds.length) {
+    return;
+  }
 
-      if (!row) {
-        return reject(new Error('Не найдены порты с таким ID'));
-      }
-
-      // Проверка типов портов и кабелей
-      if (row.port_a_type === 'patch' && row.port_b_type === 'patch') {
-        if (row.cable_a === 'patchCord' && row.cable_b === 'patchCord') {
-          resolve(true);  // Соединение допустимо
-        } else {
-          reject(new Error('Порты типа patch должны соединяться с кабелем типа patchCord'));
-        }
-      }
-
-      if (row.port_a_type === 'power' && row.port_b_type === 'power') {
-        if (row.cable_a === 'powerCable' && row.cable_b === 'powerCable') {
-          resolve(true);  // Соединение допустимо
-        } else {
-          reject(new Error('Порты типа power должны соединяться с кабелем типа powerCable'));
-        }
-      }
-
-      // Если порты несовместимы
-      reject(new Error('Порты несовместимы для соединения'));
+  for (const portId of [...new Set(portIds.map(Number))]) {
+    await new Promise((resolve, reject) => {
+      db.run(`UPDATE ports SET status = ? WHERE id = ?`, [status, portId], (err) => (err ? reject(err) : resolve()));
     });
+  }
+};
+
+const normalizeConnectionRow = (row) => ({
+  ...row,
+  id: Number(row.id),
+  cable_id: Number(row.cable_id),
+  a_port_id: Number(row.a_port_id),
+  b_port_id: Number(row.b_port_id)
+});
+
+//валидация портов
+export const validatePortsForConnection = async (a_port_id, b_port_id, ownerUserId, cable_id, excludedConnectionId = null) => {
+  const ports = await new Promise((resolve, reject) => {
+    db.all(
+      `
+        SELECT
+          p.id,
+          p.equipment_id,
+          p.port_type,
+          p.port_number,
+          p.status,
+          p.cable_type,
+          a.name AS equipment_name,
+          a.type AS equipment_type,
+          a.owner_user_id
+        FROM ports p
+        JOIN assets a ON a.id = p.equipment_id
+        WHERE p.id IN (?, ?)
+      `,
+      [a_port_id, b_port_id],
+      (err, rows) => (err ? reject(new Error('Ошибка при получении данных портов')) : resolve(rows))
+    );
   });
+
+  if (ports.length !== 2 || ports.some((port) => Number(port.owner_user_id) !== ownerUserId)) {
+    throw new Error('Не найдены порты с таким ID');
+  }
+
+  const [portA, portB] = [ports.find((item) => Number(item.id) === Number(a_port_id)), ports.find((item) => Number(item.id) === Number(b_port_id))];
+
+  if (!portA || !portB) {
+    throw new Error('Не найдены порты с таким ID');
+  }
+
+  if (Number(portA.equipment_id) === Number(portB.equipment_id)) {
+    throw new Error('Нельзя соединять два порта одного и того же устройства');
+  }
+
+  if (portA.port_type !== portB.port_type) {
+    throw new Error('Порты несовместимы для соединения');
+  }
+
+  if (portA.cable_type !== portB.cable_type) {
+    throw new Error('Порты несовместимы по типу кабеля');
+  }
+
+  const cable = await new Promise((resolve, reject) => {
+    db.get(
+      `SELECT id, type, equipment_type_allowed FROM cables WHERE id = ? AND owner_user_id = ?`,
+      [cable_id, ownerUserId],
+      (err, row) => (err ? reject(new Error('Ошибка при получении данных кабеля')) : resolve(row ?? null))
+    );
+  });
+
+  if (!cable) {
+    throw new Error('Кабель не найден');
+  }
+
+  if (cable.type !== portA.cable_type || cable.type !== portB.cable_type) {
+    throw new Error(`Кабель типа ${cable.type} несовместим с выбранными портами`);
+  }
+
+  const occupiedConnections = await new Promise((resolve, reject) => {
+    db.all(
+      `
+        SELECT id, cable_id, a_port_id, b_port_id
+        FROM connections
+        WHERE owner_user_id = ?
+          AND (? IS NULL OR id != ?)
+          AND (
+            cable_id = ?
+            OR a_port_id IN (?, ?)
+            OR b_port_id IN (?, ?)
+          )
+      `,
+      [ownerUserId, excludedConnectionId, excludedConnectionId, cable_id, a_port_id, b_port_id, a_port_id, b_port_id],
+      (err, rows) => (err ? reject(new Error('Ошибка при проверке существующих соединений')) : resolve(rows))
+    );
+  });
+
+  if (occupiedConnections.length > 0) {
+    throw new Error('Выбранный кабель или один из портов уже участвует в другом соединении');
+  }
+
+  if (portA.status === 'disabled' || portB.status === 'disabled') {
+    throw new Error('Один из выбранных портов отключен');
+  }
+
+  if ((portA.status === 'busy' || portB.status === 'busy') && excludedConnectionId === null) {
+    throw new Error('Один из выбранных портов уже занят');
+  }
+
+  return { cable, portA, portB };
 };
 
 export const createConnection = async (req, res) => {
-  const { cable_id, a_port_id, b_port_id } = req.body;
+  const { cable_id, a_port_id, b_port_id, status = 'active' } = req.body;
 
   // Проверка обязательных полей
   if (!cable_id || !a_port_id || !b_port_id) {
@@ -287,31 +366,38 @@ export const createConnection = async (req, res) => {
   }
 
   try {
-    // Валидация портов через функцию validatePortsForConnection
     const ownerUserId = getOwnerUserId(req);
-    await validatePortsForConnection(a_port_id, b_port_id, ownerUserId);
+    await validatePortsForConnection(a_port_id, b_port_id, ownerUserId, cable_id);
 
-    // Если проверка прошла, создаем соединение
+    await new Promise((resolve, reject) => db.run('BEGIN TRANSACTION', (err) => (err ? reject(err) : resolve())));
+
     const queryInsert = `
-      INSERT INTO connections (cable_id, a_port_id, b_port_id, owner_user_id)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO connections (cable_id, a_port_id, b_port_id, status, owner_user_id)
+      VALUES (?, ?, ?, ?, ?)
     `;
     
     const result = await new Promise((resolve, reject) => {
-      db.run(queryInsert, [cable_id, a_port_id, b_port_id, ownerUserId], function (err) {
+      db.run(queryInsert, [cable_id, a_port_id, b_port_id, status, ownerUserId], function (err) {
         if (err) return reject(err);
         resolve(this.lastID);
       });
     });
 
+    await updatePortStatuses([a_port_id, b_port_id], 'busy');
+    await new Promise((resolve, reject) => db.run('COMMIT', (err) => (err ? reject(err) : resolve())));
+
     logger.info(
       `Success: Connection created with ID: ${result}, Cable ID: ${cable_id}, A Port ID: ${a_port_id}, B Port ID: ${b_port_id}`
     );
 
-    return res.status(201).json({ message: 'Соединение успешно создано', id: result });
+    const createdConnection = await getConnectionByIdForOwner(result, ownerUserId);
+    return res.status(201).json({ message: 'Соединение успешно создано', id: result, connection: normalizeConnectionRow(createdConnection) });
   } catch (error) {
+    try {
+      await new Promise((resolve) => db.run('ROLLBACK', () => resolve()));
+    } catch (_) {}
     logger.error(`Error: Failed to create connection. Error: ${error.message}`);
-    return res.status(500).json({ error: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -331,17 +417,32 @@ export const getConnections = async (req, res) => {
         });
 
         logger.info(`Success: Fetched ${rows.length} connections`);
-        res.json(rows);  // Отправка данных в ответ
+        res.json(rows.map(normalizeConnectionRow));  // Отправка данных в ответ
     } catch (error) {
         logger.error(`Error: Failed to fetch connections. Error: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 };
 
+export const getConnectionById = async (req, res) => {
+  try {
+    const connection = await getConnectionByIdForOwner(req.params.id, getOwnerUserId(req));
+
+    if (!connection) {
+      return res.status(404).json({ error: 'Соединение не найдено' });
+    }
+
+    return res.status(200).json(normalizeConnectionRow(connection));
+  } catch (error) {
+    logger.error(`Error: Failed to fetch connection by id. Error: ${error.message}`);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 // Обновление соединения
 export const updateConnection = async (req, res) => {
   const { id } = req.params;
-  const { cable_id, a_port_id, b_port_id } = req.body;
+  const { cable_id, a_port_id, b_port_id, status = 'active' } = req.body;
 
   // Валидация
   if (!cable_id || !a_port_id || !b_port_id) {
@@ -353,11 +454,19 @@ export const updateConnection = async (req, res) => {
 
   try {
     const ownerUserId = getOwnerUserId(req);
-    await validatePortsForConnection(a_port_id, b_port_id, ownerUserId);
-    const query = `UPDATE connections SET cable_id = ?, a_port_id = ?, b_port_id = ? WHERE id = ? AND owner_user_id = ?`;
+    const existingConnection = await getConnectionByIdForOwner(id, ownerUserId);
+
+    if (!existingConnection) {
+      return res.status(404).json({ error: 'Соединение не найдено' });
+    }
+
+    await validatePortsForConnection(a_port_id, b_port_id, ownerUserId, cable_id, Number(id));
+
+    await new Promise((resolve, reject) => db.run('BEGIN TRANSACTION', (err) => (err ? reject(err) : resolve())));
+    const query = `UPDATE connections SET cable_id = ?, a_port_id = ?, b_port_id = ?, status = ? WHERE id = ? AND owner_user_id = ?`;
 
     const changes = await new Promise((resolve, reject) => {
-      db.run(query, [cable_id, a_port_id, b_port_id, id, ownerUserId], function (err) {
+      db.run(query, [cable_id, a_port_id, b_port_id, status, id, ownerUserId], function (err) {
         if (err) return reject(err);
         resolve(this.changes);
       });
@@ -367,12 +476,20 @@ export const updateConnection = async (req, res) => {
       return res.status(404).json({ error: 'Соединение не найдено' });
     }
 
+    await updatePortStatuses([existingConnection.a_port_id, existingConnection.b_port_id], 'available');
+    await updatePortStatuses([a_port_id, b_port_id], 'busy');
+    await new Promise((resolve, reject) => db.run('COMMIT', (err) => (err ? reject(err) : resolve())));
+
     logger.info(`Success: Connection updated. ID: ${id}`);
-    return res.status(200).json({ message: 'Соединение успешно обновлено', id: Number(id) });
+    const updatedConnection = await getConnectionByIdForOwner(id, ownerUserId);
+    return res.status(200).json({ message: 'Соединение успешно обновлено', id: Number(id), connection: normalizeConnectionRow(updatedConnection) });
 
   } catch (error) {
+    try {
+      await new Promise((resolve) => db.run('ROLLBACK', () => resolve()));
+    } catch (_) {}
     logger.error(`Error: Failed to update connection. Error: ${error.message}`);
-    return res.status(500).json({ error: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -381,6 +498,13 @@ export const deleteConnection = async (req, res) => {
   const { id } = req.params;
 
   try {
+    const existingConnection = await getConnectionByIdForOwner(id, getOwnerUserId(req));
+
+    if (!existingConnection) {
+      return res.status(404).json({ error: 'Соединение не найдено' });
+    }
+
+    await new Promise((resolve, reject) => db.run('BEGIN TRANSACTION', (err) => (err ? reject(err) : resolve())));
     const query = `DELETE FROM connections WHERE id = ? AND owner_user_id = ?`;
 
     const changes = await new Promise((resolve, reject) => {
@@ -394,10 +518,16 @@ export const deleteConnection = async (req, res) => {
       return res.status(404).json({ error: 'Соединение не найдено' });
     }
 
+    await updatePortStatuses([existingConnection.a_port_id, existingConnection.b_port_id], 'available');
+    await new Promise((resolve, reject) => db.run('COMMIT', (err) => (err ? reject(err) : resolve())));
+
     logger.info(`Success: Connection deleted. ID: ${id}`);
     return res.status(200).json({ message: 'Соединение успешно удалено', id: Number(id) });
 
   } catch (error) {
+    try {
+      await new Promise((resolve) => db.run('ROLLBACK', () => resolve()));
+    } catch (_) {}
     logger.error(`Error: Failed to delete connection. Error: ${error.message}`);
     return res.status(500).json({ error: error.message });
   }
@@ -1317,7 +1447,7 @@ export const getPortsForUps = async (req, res) => {
     }
 
     const query = `
-      SELECT id, port_type, port_number, status, cable_type
+      SELECT id, equipment_id, port_type, port_number, status, cable_type
       FROM ports
       WHERE equipment_id = ?
     `;

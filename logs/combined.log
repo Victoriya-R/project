@@ -128,3 +128,227 @@
 2026-03-21T17:41:43.013Z info: UPS data created for Equipment ID: 6
 2026-03-21T17:46:14.118Z info: Success: UPS created with ID: 7, Name: UPS-12643333, Status: available
 2026-03-21T17:46:14.131Z info: UPS data created for Equipment ID: 7
+2026-03-22T12:47:32.789Z info: Success: User admin_1 logged in
+2026-03-22T12:47:37.949Z info: Success: User admin_1 logged in
+2026-03-22T12:47:55.561Z info: Success: User admin_1 logged in
+2026-03-22T12:48:01.446Z info: Success: Fetched 0 equipment
+2026-03-22T12:48:01.447Z info: Success: Fetched 0 switch cabinets
+2026-03-22T12:48:01.448Z info: Success: Fetched 0 zones
+2026-03-22T12:48:01.449Z info: Success: Fetched 0 connections
+2026-03-22T12:48:10.538Z info: Success: Fetched 0 switch cabinets
+2026-03-22T12:48:10.539Z info: Success: Fetched 0 zones
+2026-03-22T12:48:15.110Z info: Success: Fetched 0 equipment
+2026-03-22T12:48:16.305Z info: Success: Fetched 0 equipment
+2026-03-22T12:48:16.310Z info: Success: Fetched 0 connections
+2026-03-22T12:49:05.986Z info: Success: Zone created with ID: 30, Name: Помещение 1
+2026-03-22T12:49:05.994Z info: Success: Fetched 1 zones
+2026-03-22T12:49:05.998Z info: Success: Fetched 0 switch cabinets
+2026-03-22T12:51:06.885Z info: Success: SwitchCabinet created with ID: 42, Name: Rittal
+2026-03-22T12:51:06.890Z info: Success: Fetched 1 switch cabinets
+2026-03-22T12:51:06.893Z info: Success: Fetched 1 zones
+2026-03-22T12:51:10.150Z info: Success: Fetched 0 equipment
+2026-03-22T12:52:30.637Z info: Success: Equipment created with ID: 8, Name: -, Type: server
+2026-03-22T12:52:30.638Z info: Server data created for Equipment ID: 8
+2026-03-22T12:52:30.698Z info: Success: Fetched 1 equipment
+2026-03-22T12:52:30.703Z info: Success: Fetched 1 switch cabinets
+2026-03-22T12:52:37.746Z info: Success: Fetched 1 zones
+2026-03-22T12:52:46.240Z info: Equipment ID: 8 placed in Switch Cabinet ID: 42
+2026-03-22T12:52:46.249Z info: Success: Fetched 1 equipment
+2026-03-22T12:54:02.150Z info: Success: Fetched 1 equipment
+2026-03-22T12:54:02.151Z info: Success: Fetched 1 switch cabinets
+2026-03-22T12:54:02.152Z info: Success: Fetched 1 zones
+2026-03-22T12:54:02.153Z info: Success: Fetched 0 connections
+2026-03-22T12:54:20.469Z info: Success: Fetched 0 connections
+2026-03-22T12:54:20.470Z info: Success: Fetched 1 equipment
+2026-03-22T12:54:20.473Z info: Success: Fetched 1 equipment
+2026-03-22T12:54:25.154Z info: Success: Fetched 1 zones
+2026-03-22T12:54:25.155Z info: Success: Fetched 1 switch cabinets
+2026-03-22T12:54:42.017Z info: Success: Fetched 1 equipment
+2026-03-22T12:54:42.018Z info: Success: Fetched 1 switch cabinets
+2026-03-22T12:54:42.019Z info: Success: Fetched 1 zones
+2026-03-22T12:54:42.020Z info: Success: Fetched 0 connections
+2026-03-22T13:22:20.257Z info: Success: Fetched 1 equipment
+2026-03-22T13:22:20.259Z info: Success: Fetched 1 switch cabinets
+2026-03-22T13:22:20.261Z info: Success: Fetched 1 zones
+2026-03-22T13:22:20.262Z info: Success: Fetched 0 connections
+2026-03-22T13:22:42.521Z info: Success: Fetched 1 equipment
+2026-03-22T13:22:42.522Z info: Success: Fetched 0 connections
+2026-03-22T13:22:42.522Z info: Success: Fetched 1 zones
+2026-03-22T13:22:42.523Z info: Success: Fetched 1 switch cabinets
+2026-03-22T13:22:49.560Z info: Success: User admin_1 logged in
+2026-03-22T13:23:00.676Z info: Success: User admin_1 logged in
+2026-03-22T13:27:58.413Z info: Success: Fetched 1 equipment
+2026-03-22T13:27:58.415Z info: Success: Fetched 1 switch cabinets
+2026-03-22T13:27:58.418Z info: Success: Fetched 1 zones
+2026-03-22T13:27:58.419Z info: Success: Fetched 0 connections
+2026-03-22T13:27:59.415Z info: Success: Fetched 1 equipment
+2026-03-22T13:27:59.416Z info: Success: Fetched 1 switch cabinets
+2026-03-22T13:27:59.417Z info: Success: Fetched 1 zones
+2026-03-22T13:28:01.408Z info: Success: Fetched 1 equipment
+2026-03-22T13:28:48.228Z info: Success: Fetched 1 switch cabinets
+2026-03-22T13:28:48.228Z info: Success: Fetched 1 zones
+2026-03-22T13:28:50.405Z info: Success: Fetched 1 equipment
+2026-03-22T14:24:47.917Z info: Success: User admin_1 logged in
+2026-03-22T14:24:47.971Z info: Success: Fetched 1 equipment
+2026-03-22T14:24:47.972Z info: Success: Fetched 0 connections
+2026-03-22T14:24:47.973Z info: Success: Fetched 1 zones
+2026-03-22T14:24:47.974Z info: Success: Fetched 1 switch cabinets
+2026-03-22T14:25:42.878Z info: Success: Fetched 1 switch cabinets
+2026-03-22T14:25:42.878Z info: Success: Fetched 1 zones
+2026-03-22T14:26:25.760Z info: Success: Fetched 1 equipment
+2026-03-22T14:26:43.835Z info: Success: Fetched 0 connections
+2026-03-22T14:26:43.836Z info: Success: Fetched 1 equipment
+2026-03-22T14:26:43.838Z info: Success: Fetched 1 equipment
+2026-03-22T14:29:32.497Z info: Success: Fetched 0 connections
+2026-03-22T14:29:32.498Z info: Success: Fetched 1 equipment
+2026-03-22T14:29:32.501Z info: Success: Fetched 1 equipment
+2026-03-22T14:29:35.903Z info: Success: Fetched 1 zones
+2026-03-22T14:29:35.904Z info: Success: Fetched 1 switch cabinets
+2026-03-22T14:30:40.665Z info: Success: Fetched 0 connections
+2026-03-22T14:30:40.666Z info: Success: Fetched 1 equipment
+2026-03-22T14:30:40.668Z info: Success: Fetched 1 equipment
+2026-03-22T14:30:50.699Z info: Success: Fetched 1 switch cabinets
+2026-03-22T14:30:50.702Z info: Success: Fetched 1 zones
+2026-03-22T14:31:11.351Z info: Success: Fetched 1 equipment
+2026-03-22T14:52:31.022Z info: Success: Fetched 1 switch cabinets
+2026-03-22T14:52:38.721Z info: Success: Fetched 1 switch cabinets
+2026-03-22T14:52:52.035Z info: Success: User admin_1 logged in
+2026-03-22T14:52:52.086Z info: Success: Fetched 1 equipment
+2026-03-22T14:52:52.087Z info: Success: Fetched 0 connections
+2026-03-22T14:52:52.088Z info: Success: Fetched 1 zones
+2026-03-22T14:52:52.089Z info: Success: Fetched 1 switch cabinets
+2026-03-22T14:53:00.042Z info: Success: Fetched 1 equipment
+2026-03-22T14:53:14.574Z info: Success: Cable created with ID: 5, Type: patchCord, Length: 4, Status: active
+2026-03-22T14:53:30.284Z info: Success: Cable created with ID: 6, Type: powerCable, Length: 5, Status: active
+2026-03-22T14:53:34.825Z info: Success: Fetched 1 equipment
+2026-03-22T14:54:04.119Z info: Success: UPS created with ID: 9, Name: UPS-1, Status: active
+2026-03-22T14:54:04.168Z info: UPS data created for Equipment ID: 9
+2026-03-22T14:54:04.175Z info: Success: Fetched 2 equipment
+2026-03-22T14:54:14.232Z info: Success: Fetched 1 switch cabinets
+2026-03-22T14:54:14.233Z info: Success: Fetched 1 zones
+2026-03-22T14:54:16.043Z info: Success: Fetched 2 equipment
+2026-03-22T14:54:21.269Z info: Equipment ID: 9 placed in Switch Cabinet ID: 42
+2026-03-22T14:54:21.277Z info: Success: Fetched 2 equipment
+2026-03-22T14:54:46.471Z info: Success: UPS created with ID: 10, Name: UPS-2, Status: active
+2026-03-22T14:54:46.482Z info: UPS data created for Equipment ID: 10
+2026-03-22T14:54:46.488Z info: Success: Fetched 3 equipment
+2026-03-22T14:54:50.706Z info: Success: Fetched 3 equipment
+2026-03-22T14:54:50.711Z info: Success: Fetched 1 switch cabinets
+2026-03-22T14:54:50.713Z info: Success: Fetched 1 zones
+2026-03-22T14:54:58.819Z info: Equipment ID: 10 placed in Switch Cabinet ID: 42
+2026-03-22T14:54:58.829Z info: Success: Fetched 3 equipment
+2026-03-22T14:55:00.942Z info: Success: Fetched 0 connections
+2026-03-22T14:56:54.836Z info: Success: Fetched 3 equipment
+2026-03-22T14:56:54.837Z info: Success: Fetched 1 switch cabinets
+2026-03-22T14:56:54.837Z info: Success: Fetched 1 zones
+2026-03-22T14:56:54.839Z info: Success: Fetched 0 connections
+2026-03-22T14:56:56.806Z info: Success: Fetched 0 connections
+2026-03-22T14:56:56.807Z info: Success: Fetched 3 equipment
+2026-03-22T14:56:56.809Z info: Success: Fetched 3 equipment
+2026-03-22T15:02:40.323Z info: Success: Fetched 3 equipment
+2026-03-22T15:02:40.324Z info: Success: Fetched 1 switch cabinets
+2026-03-22T15:02:40.324Z info: Success: Fetched 1 zones
+2026-03-22T15:02:40.325Z info: Success: Fetched 0 connections
+2026-03-22T15:02:42.037Z info: Success: Fetched 0 connections
+2026-03-22T15:02:42.038Z info: Success: Fetched 3 equipment
+2026-03-22T15:02:42.041Z info: Success: Fetched 3 equipment
+2026-03-22T15:38:38.296Z info: Success: Fetched 0 connections
+2026-03-22T15:38:38.298Z info: Success: Fetched 3 equipment
+2026-03-22T15:38:38.300Z info: Success: Fetched 3 equipment
+2026-03-22T15:38:40.197Z info: Success: Fetched 0 connections
+2026-03-22T15:38:40.197Z info: Success: Fetched 3 equipment
+2026-03-22T15:38:40.201Z info: Success: Fetched 3 equipment
+2026-03-22T15:39:44.247Z info: Success: Connection created with ID: 1, Cable ID: 6, A Port ID: 37, B Port ID: 43
+2026-03-22T15:39:44.256Z info: Success: Fetched 1 connections
+2026-03-22T15:39:44.265Z info: Success: Fetched 3 equipment
+2026-03-22T15:39:44.269Z info: Success: Fetched 3 equipment
+2026-03-22T15:39:57.971Z info: Success: Fetched 1 switch cabinets
+2026-03-22T15:39:57.972Z info: Success: Fetched 1 zones
+2026-03-22T15:40:23.870Z info: Success: Equipment created with ID: 11, Name: test, Type: server
+2026-03-22T15:40:23.870Z info: Server data created for Equipment ID: 11
+2026-03-22T15:40:23.919Z info: Success: Fetched 4 equipment
+2026-03-22T15:40:23.923Z info: Success: Fetched 1 switch cabinets
+2026-03-22T15:40:30.125Z info: Success: Fetched 1 connections
+2026-03-22T15:40:30.129Z info: Success: Fetched 4 equipment
+2026-03-22T15:48:52.001Z info: Success: Fetched 4 equipment
+2026-03-22T15:48:52.002Z info: Success: Fetched 1 switch cabinets
+2026-03-22T15:48:52.002Z info: Success: Fetched 1 zones
+2026-03-22T15:49:23.837Z info: Success: Equipment created with ID: 12, Name: патч тест, Type: patchPanel
+2026-03-22T15:49:23.838Z info: Patch panel data created for Equipment ID: 12
+2026-03-22T15:49:23.856Z info: Success: Fetched 5 equipment
+2026-03-22T15:49:23.858Z info: Success: Fetched 1 switch cabinets
+2026-03-22T16:14:39.175Z info: Success: User admin_1 logged in
+2026-03-22T16:14:39.232Z info: Success: Fetched 5 equipment
+2026-03-22T16:14:39.233Z info: Success: Fetched 1 connections
+2026-03-22T16:14:39.234Z info: Success: Fetched 1 zones
+2026-03-22T16:14:39.235Z info: Success: Fetched 1 switch cabinets
+2026-03-22T16:19:48.130Z info: Success: Fetched 1 connections
+2026-03-22T16:19:48.131Z info: Success: Fetched 5 equipment
+2026-03-22T16:19:48.134Z info: Success: Fetched 5 equipment
+2026-03-22T16:20:19.377Z info: Success: Fetched 1 connections
+2026-03-22T16:20:19.378Z info: Success: Fetched 5 equipment
+2026-03-22T16:20:19.384Z info: Success: Fetched 5 equipment
+2026-03-22T16:20:23.257Z info: Success: Fetched 1 switch cabinets
+2026-03-22T16:20:23.258Z info: Success: Fetched 1 zones
+2026-03-22T16:20:49.983Z info: Success: Fetched 1 connections
+2026-03-22T16:20:49.989Z info: Success: Fetched 5 equipment
+2026-03-22T16:20:49.994Z info: Success: Fetched 5 equipment
+2026-03-22T16:21:01.076Z info: Success: Fetched 5 equipment
+2026-03-22T16:21:01.081Z info: Success: Fetched 1 zones
+2026-03-22T16:21:01.082Z info: Success: Fetched 1 switch cabinets
+2026-03-22T16:21:01.083Z info: Success: Fetched 1 connections
+2026-03-23T17:18:52.667Z info: Success: User admin_1 logged in
+2026-03-23T17:18:52.728Z info: Success: Fetched 5 equipment
+2026-03-23T17:18:52.729Z info: Success: Fetched 1 zones
+2026-03-23T17:18:52.729Z info: Success: Fetched 1 switch cabinets
+2026-03-23T17:18:52.731Z info: Success: Fetched 1 connections
+2026-03-23T17:19:03.369Z info: Success: Fetched 1 zones
+2026-03-23T17:19:03.370Z info: Success: Fetched 1 switch cabinets
+2026-03-23T17:19:03.370Z info: Success: Fetched 5 equipment
+2026-03-23T17:19:56.317Z info: Success: Fetched 5 equipment
+2026-03-23T17:19:56.323Z info: Success: Fetched 1 switch cabinets
+2026-03-23T17:19:56.336Z info: Success: Fetched 1 zones
+2026-03-23T17:19:56.337Z info: Success: Fetched 1 connections
+2026-03-23T17:20:23.641Z info: Success: Fetched 1 switch cabinets
+2026-03-23T17:20:23.642Z info: Success: Fetched 1 zones
+2026-03-23T17:20:26.087Z info: Success: Fetched 5 equipment
+2026-03-23T17:20:37.118Z info: Equipment ID: 12 placed in Switch Cabinet ID: 42
+2026-03-23T17:20:37.128Z info: Success: Fetched 5 equipment
+2026-03-23T17:20:40.026Z info: Success: Fetched 5 equipment
+2026-03-23T17:20:40.032Z info: Success: Fetched 1 switch cabinets
+2026-03-23T17:20:40.034Z info: Success: Fetched 1 zones
+2026-03-23T17:20:40.036Z info: Success: Fetched 1 connections
+2026-03-23T17:20:45.598Z info: Success: Fetched 1 switch cabinets
+2026-03-23T17:21:02.054Z info: Equipment ID: 12 removed from Switch Cabinet
+2026-03-23T17:21:02.062Z info: Success: Fetched 5 equipment
+2026-03-23T17:21:05.011Z info: Success: Fetched 1 zones
+2026-03-23T17:21:05.012Z info: Success: Fetched 1 switch cabinets
+2026-03-23T17:21:37.497Z info: Success: Fetched 1 connections
+2026-03-23T17:21:37.498Z info: Success: Fetched 5 equipment
+2026-03-23T17:21:37.502Z info: Success: Fetched 5 equipment
+2026-03-23T17:24:42.767Z info: Success: User anna logged in
+2026-03-23T17:24:42.820Z info: Success: Fetched 0 equipment
+2026-03-23T17:24:42.821Z info: Success: Fetched 0 switch cabinets
+2026-03-23T17:24:42.821Z info: Success: Fetched 0 zones
+2026-03-23T17:24:42.822Z info: Success: Fetched 0 connections
+2026-03-23T17:24:47.040Z info: Success: Fetched 0 zones
+2026-03-23T17:24:47.041Z info: Success: Fetched 0 switch cabinets
+2026-03-23T17:24:47.042Z info: Success: Fetched 0 equipment
+2026-03-23T17:24:49.077Z info: Success: Fetched 0 equipment
+2026-03-23T17:28:14.130Z info: Success: Fetched 0 equipment
+2026-03-23T17:28:14.131Z info: Success: Fetched 0 switch cabinets
+2026-03-23T17:28:14.131Z info: Success: Fetched 0 zones
+2026-03-23T17:28:17.373Z info: Success: Fetched 0 equipment
+2026-03-23T17:28:17.374Z info: Success: Fetched 0 switch cabinets
+2026-03-23T17:28:17.378Z info: Success: Fetched 0 zones
+2026-03-23T17:28:17.382Z info: Success: Fetched 0 connections
+2026-03-23T17:34:00.510Z info: Success: User admin_1 logged in
+2026-03-23T17:34:00.569Z info: Success: Fetched 5 equipment
+2026-03-23T17:34:00.570Z info: Success: Fetched 1 switch cabinets
+2026-03-23T17:34:00.572Z info: Success: Fetched 1 zones
+2026-03-23T17:34:00.575Z info: Success: Fetched 1 connections
+2026-03-23T19:02:28.422Z info: Success: User admin_1 logged in
+2026-03-23T19:02:28.481Z info: Success: Fetched 5 equipment
+2026-03-23T19:02:28.482Z info: Success: Fetched 1 zones
+2026-03-23T19:02:28.483Z info: Success: Fetched 1 switch cabinets
+2026-03-23T19:02:28.485Z info: Success: Fetched 1 connections

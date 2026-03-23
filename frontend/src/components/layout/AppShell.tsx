@@ -1,5 +1,5 @@
 import { PropsWithChildren, useMemo } from 'react';
-import { Activity, Cable, ChartColumn, Cpu, LayoutDashboard, LockKeyhole, LogOut, Map, ShieldCheck, SquareStack } from 'lucide-react';
+import { Activity, Cable, ChartColumn, Cpu, LayoutDashboard, LockKeyhole, LogOut, Map, ShieldCheck, SquareStack, Unplug } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth-store';
 import { useI18n } from '../../i18n/provider';
@@ -31,15 +31,8 @@ export function AppShell({ children }: PropsWithChildren) {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
         <aside className="border-r border-slate-200 bg-white px-5 py-6">
-          <Link to="/" className="rounded-2xl bg-slate-950 px-4 py-4 text-white shadow-soft transition hover:bg-slate-900">
-            <BrandLogo
-              showWordmark
-              title="Data Center"
-              subtitle="Infrastructure API UI"
-              iconClassName="text-white"
-              titleClassName="text-white"
-              subtitleClassName="text-slate-300"
-            />
+          <Link to="/" aria-label="Dashboard" className="flex items-center rounded-2xl bg-slate-950 px-4 py-4 text-white shadow-soft">
+            <div className="rounded-xl bg-white/10 p-2"><Unplug className="h-5 w-5" /></div>
           </Link>
           <nav className="mt-8 space-y-1">
             {navItems.map(({ to, label, icon: Icon, disabled }) => disabled ? (
@@ -61,7 +54,7 @@ export function AppShell({ children }: PropsWithChildren) {
               <div>
                 <p className="text-sm font-medium text-slate-500">{t('app.enterpriseWorkspace')}</p>
                 <div className="mt-1 flex items-center gap-3">
-                  <BrandLogo compact iconClassName="h-10 w-10" />
+                  <BrandLogo iconClassName="h-10 w-10" />
                   <h2 className="text-xl font-semibold">Data Center</h2>
                 </div>
               </div>

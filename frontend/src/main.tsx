@@ -4,6 +4,10 @@ import { AppProviders } from './app/providers';
 import { AppRouter } from './app/router';
 import './styles.css';
 
+if (typeof document !== 'undefined') {
+  document.title = 'Data Center';
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AppProviders>

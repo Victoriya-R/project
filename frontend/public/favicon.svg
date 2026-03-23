@@ -1,0 +1,84 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cloudTop" x1="256" y1="96" x2="256" y2="318" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#21C4F5"/>
+      <stop offset="0.48" stop-color="#0B6BC4"/>
+      <stop offset="1" stop-color="#061C56"/>
+    </linearGradient>
+    <linearGradient id="cloudShade" x1="164" y1="198" x2="372" y2="356" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0C6AD6" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#04183F" stop-opacity="0.42"/>
+    </linearGradient>
+    <linearGradient id="buildingWindow" x1="256" y1="162" x2="256" y2="302" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8EF2FF"/>
+      <stop offset="1" stop-color="#0D8BD0"/>
+    </linearGradient>
+    <linearGradient id="arcFill" x1="124" y1="318" x2="420" y2="318" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF6A00"/>
+      <stop offset="0.58" stop-color="#FF8A00"/>
+      <stop offset="1" stop-color="#FFB000"/>
+    </linearGradient>
+    <linearGradient id="circuitLine" x1="106" y1="330" x2="406" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0A5FC8"/>
+      <stop offset="1" stop-color="#12459E"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M172 332C128.922 332 94 297.078 94 254C94 223.547 111.456 197.173 136.897 184.333C138.815 147.16 169.547 118 207.2 118C221.518 118 234.849 122.216 245.999 129.478C261.126 102.946 289.679 85 322.4 85C369.498 85 408.139 122.217 411.03 168.602C416.09 166.905 421.505 166 427.13 166C454.375 166 476.46 188.085 476.46 215.33C476.46 219.409 475.964 223.372 475.03 227.161C492.348 238.593 504 257.968 504 280.066C504 315.373 475.373 344 440.066 344H172V332Z" fill="url(#cloudTop)"/>
+  <path d="M173.552 332.652C129.624 329.283 95 294.258 95 252.458C95 239.541 98.31 227.397 104.124 216.833C111.38 219.52 119.387 221 127.74 221C163.763 221 193.452 193.534 196.985 158.436C204.374 156.189 212.214 154.981 220.337 154.981C250.176 154.981 276.212 171.291 289.985 195.468C299.229 191.587 309.386 189.438 320.045 189.438C358.068 189.438 389.295 216.797 392.972 252.857C398.385 251.046 404.172 250.061 410.19 250.061C429.735 250.061 446.871 260.362 456.528 275.824C445.255 309.358 413.538 333.549 376.211 333.549H181.306C178.707 333.549 176.116 333.25 173.552 332.652Z" fill="url(#cloudShade)"/>
+
+  <g>
+    <path d="M194 190L164 198V328H194V190Z" fill="#0C3C8E" stroke="white" stroke-width="12" stroke-linejoin="round"/>
+    <path d="M194 190L239 180V328H194V190Z" fill="#0C4C9C" stroke="white" stroke-width="12" stroke-linejoin="round"/>
+    <path d="M273 140H347V328H273V140Z" fill="#0A4A95" stroke="white" stroke-width="12" stroke-linejoin="round"/>
+    <path d="M378 190L348 180V328H378V190Z" fill="#0C4C9C" stroke="white" stroke-width="12" stroke-linejoin="round"/>
+    <path d="M378 190L423 198V328H378V190Z" fill="#0C3C8E" stroke="white" stroke-width="12" stroke-linejoin="round"/>
+  </g>
+
+  <g fill="url(#buildingWindow)">
+    <rect x="177" y="214" width="42" height="12" rx="2"/>
+    <rect x="177" y="236" width="42" height="12" rx="2"/>
+    <rect x="177" y="258" width="42" height="12" rx="2"/>
+    <rect x="177" y="280" width="42" height="12" rx="2"/>
+
+    <rect x="293" y="162" width="34" height="18" rx="2"/>
+    <rect x="293" y="188" width="34" height="18" rx="2"/>
+    <rect x="293" y="214" width="34" height="18" rx="2"/>
+    <rect x="293" y="240" width="34" height="18" rx="2"/>
+    <rect x="293" y="266" width="34" height="18" rx="2"/>
+    <rect x="293" y="292" width="34" height="18" rx="2"/>
+
+    <rect x="390" y="214" width="42" height="12" rx="2"/>
+    <rect x="390" y="236" width="42" height="12" rx="2"/>
+    <rect x="390" y="258" width="42" height="12" rx="2"/>
+    <rect x="390" y="280" width="42" height="12" rx="2"/>
+  </g>
+
+  <path d="M110 288C176 313 260 322 358 315C401 312 437 304 466 291" stroke="white" stroke-width="14" stroke-linecap="round"/>
+  <path d="M118 306C184 329 267 337 359 329C404 325 441 315 474 298" stroke="url(#arcFill)" stroke-width="20" stroke-linecap="round"/>
+
+  <g stroke="url(#circuitLine)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M118 326V376H142"/>
+    <path d="M146 326V398H194V376H216"/>
+    <path d="M238 326V434L202 460H170"/>
+    <path d="M256 326V450"/>
+    <path d="M274 326V434L310 460H342"/>
+    <path d="M366 326V398H318V376H296"/>
+    <path d="M394 326V376H426"/>
+    <path d="M426 376H470"/>
+    <path d="M394 398H430"/>
+    <path d="M394 420H446"/>
+  </g>
+
+  <g fill="white" stroke="url(#circuitLine)" stroke-width="10">
+    <circle cx="148" cy="376" r="11"/>
+    <circle cx="216" cy="376" r="11"/>
+    <circle cx="170" cy="460" r="11"/>
+    <circle cx="256" cy="450" r="11"/>
+    <circle cx="342" cy="460" r="11"/>
+    <circle cx="426" cy="376" r="11"/>
+    <circle cx="470" cy="376" r="11"/>
+    <circle cx="446" cy="420" r="11"/>
+    <circle cx="430" cy="398" r="11"/>
+  </g>
+</svg>

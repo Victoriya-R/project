@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/auth-store';
 import { useI18n } from '../../i18n/provider';
 import { Button } from '../common/Button';
 import { LanguageSwitcher } from '../common/LanguageSwitcher';
+import { BrandLogo } from '../common/BrandLogo';
 import { cn } from '../../utils/cn';
 
 export function AppShell({ children }: PropsWithChildren) {
@@ -30,12 +31,8 @@ export function AppShell({ children }: PropsWithChildren) {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
         <aside className="border-r border-slate-200 bg-white px-5 py-6">
-          <Link to="/" className="flex items-center gap-3 rounded-2xl bg-slate-950 px-4 py-4 text-white shadow-soft">
+          <Link to="/" aria-label="Dashboard" className="flex items-center rounded-2xl bg-slate-950 px-4 py-4 text-white shadow-soft">
             <div className="rounded-xl bg-white/10 p-2"><Unplug className="h-5 w-5" /></div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-300">DCIM</p>
-              <p className="font-semibold">Infrastructure API UI</p>
-            </div>
           </Link>
           <nav className="mt-8 space-y-1">
             {navItems.map(({ to, label, icon: Icon, disabled }) => disabled ? (
@@ -55,9 +52,11 @@ export function AppShell({ children }: PropsWithChildren) {
           <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-6 py-4 backdrop-blur">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-
                 <p className="text-sm font-medium text-slate-500">{t('app.enterpriseWorkspace')}</p>
-                <h2 className="text-xl font-semibold">{t('app.title')}</h2>
+                <div className="mt-1 flex items-center gap-3">
+                  <BrandLogo iconClassName="h-10 w-10" />
+                  <h2 className="text-xl font-semibold">Data Center</h2>
+                </div>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <LanguageSwitcher />

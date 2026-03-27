@@ -15,7 +15,9 @@ import {
   UpsEntity,
   Zone,
   ZoneLoadReportRow,
-  ZoneReportRow
+  ZoneReportRow,
+  FloorPlan,
+  FloorPlanRack
 } from '../../types/entities';
 import {
   mockCables,
@@ -206,4 +208,28 @@ export const reportsApi = {
   switchCabinets: () => withFallback<SwitchCabinetReportRow[]>('/equipment/reports/switch-cabinets', async () => (await api.get('/equipment/reports/switch-cabinets')).data, () => mockSwitchCabinetsReport, 'Switch cabinet report fallback uses local fixtures.'),
   zones: () => withFallback<ZoneReportRow[]>('/equipment/reports/zones', async () => (await api.get('/equipment/reports/zones')).data, () => mockZonesReport, 'Zone report fallback uses local fixtures.'),
   zonesLoad: () => withFallback<ZoneLoadReportRow[]>('/equipment/reports/zones-load', async () => (await api.get('/equipment/reports/zones-load')).data, () => mockZoneLoadReport, 'Zone load report fallback uses local fixtures.')
+};
+
+
+export const floorplansApi = {
+  list: () => withFallback<FloorPlan[]>('/api/floorplan', async () => (await api.get('/api/floorplan')).data, () => [], 'Floor plan list fallback uses empty collection.'),
+  create: async (payload: Partial<FloorPlan>) => (await api.post('/api/floorplan/create', payload)).data,
+  update: async (id: number, payload: Partial<FloorPlan>) => (await api.put(`/api/floorplan/update/${id}`, payload)).data,
+  remove: async (id: number) => (await api.delete(`/api/floorplan/delete/${id}`)).data,
+  detail3d: (id: number) => withFallback<FloorPlan>(`/api/floorplan/${id}`, async () => (await api.get(`/api/floorplan/${id}`)).data, () => ({
+    id,
+    name: 'Demo floor plan',
+    description: 'Fallback scene',
+    width: 12,
+    depth: 8,
+    height: 3,
+    camera: {},
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    racks: []
+  }), '3D floor plan fallback uses a minimal empty scene.'),
+  createRack: async (payload: Partial<FloorPlanRack>) => (await api.post('/api/rack/create', payload)).data,
+  updateRack: async (id: number, payload: Partial<FloorPlanRack>) => (await api.put(`/api/rack/update/${id}`, payload)).data,
+  removeRack: async (id: number) => (await api.delete(`/api/rack/delete/${id}`)).data,
+  rack2d: async (id: number) => (await api.get<FloorPlanRack>(`/api/rack/${id}/2d`)).data
 };

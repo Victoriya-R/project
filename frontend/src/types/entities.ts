@@ -70,6 +70,43 @@ export interface Zone {
   site?: string;
 }
 
+
+export interface FloorPlanRackEquipment {
+  id: number;
+  name: string;
+  unit: number;
+  type?: string;
+  status?: EntityStatus;
+}
+
+export interface FloorPlanRack {
+  id: number;
+  floorplan_id: number;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  rotation_y: number;
+  width: number;
+  depth: number;
+  height: number;
+  unit_capacity: number;
+  equipment: FloorPlanRackEquipment[];
+}
+
+export interface FloorPlan {
+  id: number;
+  name: string;
+  description?: string;
+  width: number;
+  depth: number;
+  height: number;
+  camera: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  racks?: FloorPlanRack[];
+}
+
 export interface Cable {
   id: number;
   type: CableType;

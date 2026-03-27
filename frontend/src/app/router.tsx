@@ -16,6 +16,7 @@ import { UpsPage } from '../pages/UpsPage';
 import { ZoneDetailPage } from '../pages/ZoneDetailPage';
 import { ZonesPage } from '../pages/ZonesPage';
 import { AccessManagementPage } from '../pages/AccessManagementPage';
+import { FloorPlansPage } from '../pages/FloorPlansPage';
 import { authApi } from '../services/api/client';
 import { useAuthStore } from '../store/auth-store';
 
@@ -129,6 +130,7 @@ export function AppRouter() {
           <Route path="/cables" element={<CablesPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/access-management" element={<AccessManagementPage />} />
+          <Route path="/floorplans" element={<FloorPlansPage />} />
         </Route>
       </Routes>
     </Router>

@@ -123,6 +123,45 @@ const createCablesTable = async () => {
   `);
 };
 
+
+const createFloorPlansTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS floorplans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      width REAL NOT NULL DEFAULT 12,
+      depth REAL NOT NULL DEFAULT 8,
+      height REAL NOT NULL DEFAULT 3,
+      camera_json TEXT,
+      owner_user_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+};
+
+const createFloorPlanRacksTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS floorplan_racks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      floorplan_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      x REAL NOT NULL DEFAULT 0,
+      y REAL NOT NULL DEFAULT 0,
+      z REAL NOT NULL DEFAULT 0,
+      rotation_y REAL NOT NULL DEFAULT 0,
+      width REAL NOT NULL DEFAULT 0.6,
+      depth REAL NOT NULL DEFAULT 1,
+      height REAL NOT NULL DEFAULT 2,
+      unit_capacity INTEGER NOT NULL DEFAULT 42,
+      equipment_json TEXT,
+      owner_user_id INTEGER,
+      FOREIGN KEY(floorplan_id) REFERENCES floorplans(id) ON DELETE CASCADE
+    )
+  `);
+};
+
 const createConnectionsTable = async () => {
   await run(`
     CREATE TABLE IF NOT EXISTS connections (
@@ -255,6 +294,8 @@ const ensureBaseSchema = async () => {
   await createPortsTable();
   await createCablesTable();
   await createConnectionsTable();
+  await createFloorPlansTable();
+  await createFloorPlanRacksTable();
   await rebuildPortsTableIfNeeded();
 
   await ensureColumn('users', 'is_superuser', 'INTEGER NOT NULL DEFAULT 0');
@@ -264,6 +305,12 @@ const ensureBaseSchema = async () => {
   await ensureColumn('cables', 'owner_user_id', 'INTEGER');
   await ensureColumn('connections', 'owner_user_id', 'INTEGER');
   await ensureColumn('connections', 'status', `TEXT NOT NULL DEFAULT 'active'`);
+  await ensureColumn('floorplans', 'owner_user_id', 'INTEGER');
+  await ensureColumn('floorplans', 'camera_json', 'TEXT');
+  await ensureColumn('floorplans', 'created_at', `TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP`);
+  await ensureColumn('floorplans', 'updated_at', `TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP`);
+  await ensureColumn('floorplan_racks', 'owner_user_id', 'INTEGER');
+  await ensureColumn('floorplan_racks', 'equipment_json', 'TEXT');
 
   await normalizeSeedUsers();
   await createUniqueIndexIfMissing('users_username_unique_idx', 'users', 'username');

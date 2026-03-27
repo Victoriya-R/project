@@ -5,6 +5,7 @@ import './utils/logger.js';
 import './utils/db.js';
 import userRoutes from './routes/userRoutes.js';
 import equipmentRoutes from './routes/equipmentRoutes.js';
+import floorplanRoutes from './routes/floorplanRoutes.js';
 import authenticateToken from './middlewares/authMiddleware.js';
 
 const app = express();
@@ -27,6 +28,7 @@ app.use(express.json());
 
 app.use('/users', userRoutes);
 app.use('/equipment', authenticateToken, equipmentRoutes);
+app.use('/api', authenticateToken, floorplanRoutes);
 
 const swaggerOptions = {
   definition: {
@@ -146,6 +148,14 @@ const swaggerOptions = {
       {
         name: 'Reports',
         description: 'Отчёты и сводная аналитика по инфраструктуре',
+      },
+      {
+        name: 'Floor Plans',
+        description: 'Планы помещений и их 3D-представление',
+      },
+      {
+        name: 'Floor Plan Racks',
+        description: 'Стойки в рамках плана помещения и их 2D/3D представления',
       },
     ],
   },

@@ -54,6 +54,7 @@ export function FloorPlansPage() {
   const cabinets = cabinetsQuery.data?.data ?? [];
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [selectedRackId, setSelectedRackId] = useState<number | null>(null);
+  const [selectedRackUnit, setSelectedRackUnit] = useState<number | null>(null);
   const [newRackName, setNewRackName] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -65,6 +66,7 @@ export function FloorPlansPage() {
       setSelectedPlanId(null);
  
       setSelectedRackId(null);
+      setSelectedRackUnit(null);
       return;
     }
 
@@ -85,6 +87,10 @@ export function FloorPlansPage() {
       setPlanDraft(detailQuery.data.data);
     }
   }, [detailQuery.data]);
+
+  useEffect(() => {
+    setSelectedRackUnit(null);
+  }, [selectedRackId]);
 
 
   const invalidate = async () => {
@@ -325,20 +331,9 @@ export function FloorPlansPage() {
                     <button
                       key={unit}
                       type="button"
-                      className={`rounded-lg border p-2 text-left text-xs ${item ? 'border-brand-300 bg-brand-50' : 'border-slate-200 bg-slate-50'}`}
+                      className={`rounded-lg border p-2 text-left text-xs transition ${selectedRackUnit === unit ? 'ring-2 ring-cyan-300' : ''} ${item ? 'border-brand-300 bg-brand-50' : 'border-slate-200 bg-slate-50'}`}
                       onClick={() => {
-                        if (!planDraft) {
-                          return;
-                        }
-
-                        const updatedEquipment = item
-                          ? selectedRack.equipment.filter((equipment) => equipment.unit !== unit)
-                          : [...selectedRack.equipment, { id: Date.now(), name: `Server U${unit}`, unit, type: 'server', status: 'active' as const }];
-
-                        setPlanDraft({
-                          ...planDraft,
-                          racks: (planDraft.racks ?? []).map((rack) => rack.id === selectedRack.id ? { ...rack, equipment: updatedEquipment } : rack)
-                        });
+                        setSelectedRackUnit(unit);
                       }}
                     >
                       <div className="font-semibold">U{unit}</div>
@@ -347,6 +342,28 @@ export function FloorPlansPage() {
                   );
                 })}
               </div>
+              {selectedRackUnit ? (
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+                  {(() => {
+                    const selectedUnitEquipment = selectedRack.equipment.find((equipment) => equipment.unit === selectedRackUnit);
+                    if (!selectedUnitEquipment) {
+                      return (
+                        <div>
+                          <p className="font-semibold text-slate-900">U{selectedRackUnit}: Свободно</p>
+                          <p className="text-slate-600">Слот пуст. Автоматическое создание фиктивного сервера отключено.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div>
+                        <p className="font-semibold text-slate-900">U{selectedRackUnit}: {selectedUnitEquipment.name}</p>
+                        <p className="text-slate-600">Реальный объект из данных стойки (id: {selectedUnitEquipment.id}).</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </>

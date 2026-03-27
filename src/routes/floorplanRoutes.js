@@ -20,10 +20,7 @@ const router = express.Router();
  *     tags:
  *       - Floor Plans
  *     summary: Создание нового плана помещения
-<<<<<<< HEAD
-=======
  *     description: Создаёт план помещения для последующего 3D-отображения со стойками и оборудованием.
->>>>>>> origin/main
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -32,7 +29,6 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             type: object
-<<<<<<< HEAD
  *             required: [zone_id, name]
  *             properties:
  *               zone_id:
@@ -40,19 +36,10 @@ const router = express.Router();
  *                 example: 1
  *               name:
  *                 type: string
- *                 example: Машзал А
- *               description:
- *                 type: string
-=======
- *             required: [name]
- *             properties:
- *               name:
- *                 type: string
  *                 example: Основной зал №1
  *               description:
  *                 type: string
  *                 example: План основного серверного помещения
->>>>>>> origin/main
  *               width:
  *                 type: number
  *                 example: 18
@@ -62,7 +49,6 @@ const router = express.Router();
  *               height:
  *                 type: number
  *                 example: 3.5
-<<<<<<< HEAD
  *               panel_size_x:
  *                 type: number
  *                 example: 0.6
@@ -74,6 +60,7 @@ const router = express.Router();
  *                 example: 1
  *               grid_enabled:
  *                 type: boolean
+ *                 example: true
  *               axis_x_label:
  *                 type: string
  *                 example: X
@@ -82,24 +69,18 @@ const router = express.Router();
  *                 example: Y
  *               background_image_url:
  *                 type: string
+ *                 nullable: true
  *                 example: https://example.com/floor-a.png
- *               camera:
- *                 type: object
- *     responses:
- *       201:
- *         description: План помещения создан
- *       409:
- *         description: Для зоны уже существует план
-=======
  *               camera:
  *                 type: object
  *                 description: Начальные параметры камеры 3D сцены
  *     responses:
  *       201:
  *         description: План помещения создан
- *       400:
- *         description: Некорректный запрос
->>>>>>> origin/main
+ *       404:
+ *         description: Зона не найдена
+ *       409:
+ *         description: Для зоны уже существует план
  */
 router.post('/floorplan/create', createFloorPlan);
 
@@ -140,11 +121,8 @@ router.get('/floorplan', listFloorPlans);
  *           schema:
  *             type: object
  *             properties:
-<<<<<<< HEAD
  *               zone_id:
  *                 type: integer
-=======
->>>>>>> origin/main
  *               name:
  *                 type: string
  *               description:
@@ -153,27 +131,32 @@ router.get('/floorplan', listFloorPlans);
  *                 type: number
  *               depth:
  *                 type: number
-<<<<<<< HEAD
+ *               height:
+ *                 type: number
  *               panel_size_x:
  *                 type: number
  *               panel_size_y:
  *                 type: number
+ *               scale:
+ *                 type: number
+ *               grid_enabled:
+ *                 type: boolean
+ *               axis_x_label:
+ *                 type: string
+ *               axis_y_label:
+ *                 type: string
  *               background_image_url:
  *                 type: string
-=======
- *               height:
- *                 type: number
->>>>>>> origin/main
+ *                 nullable: true
  *               camera:
  *                 type: object
  *     responses:
  *       200:
  *         description: План помещения обновлён
-<<<<<<< HEAD
-=======
  *       404:
- *         description: План помещения не найден
->>>>>>> origin/main
+ *         description: План помещения или зона не найдены
+ *       409:
+ *         description: Для зоны уже существует план
  */
 router.put('/floorplan/update/:id', updateFloorPlan);
 
@@ -195,11 +178,8 @@ router.put('/floorplan/update/:id', updateFloorPlan);
  *     responses:
  *       200:
  *         description: План помещения удалён
-<<<<<<< HEAD
-=======
  *       404:
  *         description: План помещения не найден
->>>>>>> origin/main
  */
 router.delete('/floorplan/delete/:id', deleteFloorPlan);
 
@@ -209,12 +189,8 @@ router.delete('/floorplan/delete/:id', deleteFloorPlan);
  *   get:
  *     tags:
  *       - Floor Plans
-<<<<<<< HEAD
- *     summary: Получение 3D/2D данных плана помещения
-=======
  *     summary: Получение 3D представления плана помещения
  *     description: Возвращает план помещения с геометрией, стойками и вложенным оборудованием для рендера 3D сцены.
->>>>>>> origin/main
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -225,13 +201,9 @@ router.delete('/floorplan/delete/:id', deleteFloorPlan);
  *           type: integer
  *     responses:
  *       200:
-<<<<<<< HEAD
- *         description: Данные плана помещения со стойками
-=======
  *         description: 3D представление плана помещения
  *       404:
  *         description: План помещения не найден
->>>>>>> origin/main
  */
 router.get('/floorplan/:id', getFloorPlan3DView);
 
@@ -254,27 +226,19 @@ router.get('/floorplan/:id', getFloorPlan3DView);
  *             properties:
  *               floorplan_id:
  *                 type: integer
-<<<<<<< HEAD
  *               switch_cabinet_id:
  *                 type: integer
  *                 nullable: true
-=======
->>>>>>> origin/main
  *               name:
  *                 type: string
  *               x:
  *                 type: number
-<<<<<<< HEAD
- *               z:
- *                 type: number
-=======
  *               y:
  *                 type: number
  *               z:
  *                 type: number
  *               rotation_y:
  *                 type: number
->>>>>>> origin/main
  *               width:
  *                 type: number
  *               depth:
@@ -290,6 +254,10 @@ router.get('/floorplan/:id', getFloorPlan3DView);
  *     responses:
  *       201:
  *         description: Стойка создана
+ *       404:
+ *         description: План помещения или стойка switch_cabinet не найдены
+ *       409:
+ *         description: Нельзя разместить стойку из другой зоны на этом плане
  */
 router.post('/rack/create', createRack);
 
@@ -314,12 +282,10 @@ router.post('/rack/create', createRack);
  *         application/json:
  *           schema:
  *             type: object
-<<<<<<< HEAD
- *     responses:
- *       200:
- *         description: Стойка обновлена
-=======
  *             properties:
+ *               switch_cabinet_id:
+ *                 type: integer
+ *                 nullable: true
  *               name:
  *                 type: string
  *               x:
@@ -330,6 +296,14 @@ router.post('/rack/create', createRack);
  *                 type: number
  *               rotation_y:
  *                 type: number
+ *               width:
+ *                 type: number
+ *               depth:
+ *                 type: number
+ *               height:
+ *                 type: number
+ *               unit_capacity:
+ *                 type: integer
  *               equipment:
  *                 type: array
  *                 items:
@@ -339,7 +313,6 @@ router.post('/rack/create', createRack);
  *         description: Стойка обновлена
  *       404:
  *         description: Стойка не найдена
->>>>>>> origin/main
  */
 router.put('/rack/update/:id', updateRack);
 
@@ -361,6 +334,8 @@ router.put('/rack/update/:id', updateRack);
  *     responses:
  *       200:
  *         description: Стойка удалена
+ *       404:
+ *         description: Стойка не найдена
  */
 router.delete('/rack/delete/:id', deleteRack);
 
@@ -371,10 +346,7 @@ router.delete('/rack/delete/:id', deleteRack);
  *     tags:
  *       - Floor Plan Racks
  *     summary: Получение 2D вида стойки
-<<<<<<< HEAD
-=======
  *     description: Возвращает данные выбранной стойки для детального 2D отображения юнитов и оборудования.
->>>>>>> origin/main
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -386,11 +358,8 @@ router.delete('/rack/delete/:id', deleteRack);
  *     responses:
  *       200:
  *         description: 2D вид стойки
-<<<<<<< HEAD
-=======
  *       404:
  *         description: Стойка не найдена
->>>>>>> origin/main
  */
 router.get('/rack/:id/2d', getRack2DView);
 

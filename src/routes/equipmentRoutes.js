@@ -81,12 +81,6 @@ const router = express.Router();
  *         description: Unauthorized
  *       403:
  *         description: Forbidden (только admin)
- */
-router.post('/zones', createZone);
-
-/**
- * @swagger
- * /equipment/zones:
  *   get:
  *     tags:
  *       - Placement
@@ -97,6 +91,7 @@ router.post('/zones', createZone);
  *       200:
  *         description: Список зон
  */
+router.post('/zones', createZone);
 router.get('/zones', getZones);
 
 /**
@@ -119,12 +114,6 @@ router.get('/zones', getZones);
  *         description: Зона найдена
  *       404:
  *         description: Зона не найдена
- */
-router.get('/zones/:id', getZoneById);
-
-/**
- * @swagger
- * /equipment/zones/{id}:
  *   put:
  *     tags:
  *       - Placement
@@ -163,12 +152,6 @@ router.get('/zones/:id', getZoneById);
  *         description: Некорректные данные
  *       404:
  *         description: Зона не найдена
- */
-router.put('/zones/:id', updateZone);
-
-/**
- * @swagger
- * /equipment/zones/{id}:
  *   delete:
  *     tags:
  *       - Placement
@@ -189,6 +172,8 @@ router.put('/zones/:id', updateZone);
  *       409:
  *         description: Нельзя удалить зону, в которой размещены стойки
  */
+router.get('/zones/:id', getZoneById);
+router.put('/zones/:id', updateZone);
 router.delete('/zones/:id', deleteZone);
 
 

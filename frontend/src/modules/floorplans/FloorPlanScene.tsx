@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FloorPlan, FloorPlanRack } from '../../types/entities';
 
 type DragPayload = {
@@ -29,6 +29,9 @@ export function FloorPlanScene({
   const [zoom2d, setZoom2d] = useState(1);
   const [zoom3d, setZoom3d] = useState(1);
   const [rotation3d, setRotation3d] = useState(28);
+  const [pan3d, setPan3d] = useState({ x: 0, y: 0 });
+  const [isPanning3d, setIsPanning3d] = useState(false);
+  const [lastPanPoint, setLastPanPoint] = useState<{ x: number; y: number } | null>(null);
   const [hoveredRackId, setHoveredRackId] = useState<number | null>(null);
   const [draggingRackId, setDraggingRackId] = useState<number | null>(null);
   const roomRef = useRef<HTMLDivElement | null>(null);
@@ -72,6 +75,30 @@ export function FloorPlanScene({
 
   const selectedRack = racks.find((rack) => rack.id === selectedRackId) ?? null;
   const rackSlotPreviewLimit = 24;
+  const roomCenterX = roomPixelWidth / 2;
+  const roomCenterZ = roomPixelDepth / 2;
+  const maxPanX = Math.max(0, roomPixelWidth * (zoom3d - 1) * 0.6 + 140);
+  const maxPanY = Math.max(0, roomPixelDepth * (zoom3d - 1) * 0.6 + 140);
+
+  useEffect(() => {
+    setPan3d((current) => ({
+      x: clamp(current.x, -maxPanX, maxPanX),
+      y: clamp(current.y, -maxPanY, maxPanY)
+    }));
+  }, [maxPanX, maxPanY]);
+
+  useEffect(() => {
+    if (!selectedRack || mode !== '3d') {
+      return;
+    }
+
+    const rackCenterOnFloorX = (selectedRack.x + selectedRack.width / 2) * meterToPixel - roomCenterX;
+    const rackCenterOnFloorZ = (selectedRack.z + selectedRack.depth / 2) * meterToPixel - roomCenterZ;
+    setPan3d({
+      x: clamp(-rackCenterOnFloorX * zoom3d * 0.45, -maxPanX, maxPanX),
+      y: clamp(-rackCenterOnFloorZ * zoom3d * 0.45, -maxPanY, maxPanY)
+    });
+  }, [selectedRackId, selectedRack, mode, meterToPixel, roomCenterX, roomCenterZ, zoom3d, maxPanX, maxPanY]);
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
@@ -101,14 +128,14 @@ export function FloorPlanScene({
           ) : (
             <>
               <label className="flex items-center gap-2">Zoom
-                <input type="range" min={0.6} max={1.8} step={0.05} value={zoom3d} onChange={(event) => setZoom3d(Number(event.target.value))} />
+                <input type="range" min={0.75} max={1.55} step={0.05} value={zoom3d} onChange={(event) => setZoom3d(Number(event.target.value))} />
               </label>
               <label className="flex items-center gap-2">Rotate
-                <input type="range" min={0} max={360} step={1} value={rotation3d} onChange={(event) => setRotation3d(Number(event.target.value))} />
+                <input type="range" min={-70} max={70} step={1} value={rotation3d} onChange={(event) => setRotation3d(Number(event.target.value))} />
               </label>
             </>
           )}
-          <button type="button" className="rounded-lg border border-slate-200 px-2 py-1 hover:bg-slate-50" onClick={() => { setZoom2d(1); setZoom3d(1); setRotation3d(28); }}>Reset view</button>
+          <button type="button" className="rounded-lg border border-slate-200 px-2 py-1 hover:bg-slate-50" onClick={() => { setZoom2d(1); setZoom3d(1); setRotation3d(28); setPan3d({ x: 0, y: 0 }); }}>Reset view</button>
         </div>
       </div>
 
@@ -186,33 +213,68 @@ export function FloorPlanScene({
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-100 bg-slate-950/95 p-3 text-white">
-            <div className="relative h-[520px] overflow-hidden rounded-xl border border-white/10">
+            <div
+              className="relative h-[520px] overflow-hidden rounded-xl border border-white/10"
+              onPointerDown={(event) => {
+                if (event.button !== 0) {
+                  return;
+                }
+                setIsPanning3d(true);
+                setLastPanPoint({ x: event.clientX, y: event.clientY });
+              }}
+              onPointerMove={(event) => {
+                if (!isPanning3d || !lastPanPoint) {
+                  return;
+                }
+                const deltaX = event.clientX - lastPanPoint.x;
+                const deltaY = event.clientY - lastPanPoint.y;
+                setPan3d((current) => ({
+                  x: clamp(current.x + deltaX, -maxPanX, maxPanX),
+                  y: clamp(current.y + deltaY, -maxPanY, maxPanY)
+                }));
+                setLastPanPoint({ x: event.clientX, y: event.clientY });
+              }}
+              onPointerUp={() => {
+                setIsPanning3d(false);
+                setLastPanPoint(null);
+              }}
+              onPointerLeave={() => {
+                setIsPanning3d(false);
+                setLastPanPoint(null);
+              }}
+            >
               <div
                 className="absolute left-1/2 top-1/2"
                 style={{
-                  transform: `translate(-50%, -50%) scale(${zoom3d}) perspective(1200px) rotateX(58deg) rotateZ(${rotation3d}deg)`,
+                  transform: `translate(calc(-50% + ${pan3d.x}px), calc(-50% + ${pan3d.y}px)) scale(${zoom3d}) perspective(1200px) rotateX(58deg) rotateZ(${rotation3d}deg)`,
                   transformStyle: 'preserve-3d'
                 }}
               >
-                <div
-                  className="relative border border-white/20 bg-slate-700/70"
-                  style={{
-                    width: roomPixelWidth,
-                    height: roomPixelDepth,
-                    boxShadow: '0 24px 80px rgba(15, 23, 42, 0.55)'
-                  }}
-                >
+                <div className="relative" style={{ width: roomPixelWidth, height: roomPixelDepth, transformStyle: 'preserve-3d' }}>
+                  <div
+                    className="absolute left-1/2 top-1/2 border border-white/20 bg-slate-700/70"
+                    style={{
+                      width: roomPixelWidth,
+                      height: roomPixelDepth,
+                      transform: 'translate(-50%, -50%)',
+                      boxShadow: '0 24px 80px rgba(15, 23, 42, 0.55)'
+                    }}
+                  />
                   {racks.map((rack) => {
                     const isSelected = selectedRackId === rack.id;
-                    const rackWidthPx = Math.max(rack.width * meterToPixel, 30);
-                    const rackDepthPx = Math.max(rack.depth * meterToPixel, 44);
-                    const rackHeightPx = Math.max(rack.height * meterToPixel, 180);
+                    const rackWidthPx = Math.max(rack.width * meterToPixel, 16);
+                    const rackDepthPx = Math.max(rack.depth * meterToPixel, 26);
+                    const rackHeightPx = Math.max(rack.height * meterToPixel, 110);
                     const unitCapacity = Math.max(rack.unit_capacity, 1);
                     const visibleSlots = Math.min(unitCapacity, rackSlotPreviewLimit);
                     const unitsPerSlot = Math.max(1, Math.ceil(unitCapacity / visibleSlots));
                     const occupiedUnits = rack.equipment.reduce((sum, equipment) => sum + Math.max(equipment.unit || 1, 1), 0);
                     const occupancyRate = clamp(occupiedUnits / unitCapacity, 0, 1);
                     const occupiedSlotCount = Math.round(visibleSlots * occupancyRate);
+                    const rackCenterOnFloorX = rack.x * meterToPixel + rackWidthPx / 2 - roomCenterX;
+                    const rackCenterOnFloorZ = rack.z * meterToPixel + rackDepthPx / 2 - roomCenterZ;
+                    const rackLiftY = -rackHeightPx;
+                    const rackHalfDepth = rackDepthPx / 2;
 
                     return (
                       <button
@@ -221,25 +283,23 @@ export function FloorPlanScene({
                         onClick={() => onSelectRack(rack)}
                         onMouseEnter={() => setHoveredRackId(rack.id)}
                         onMouseLeave={() => setHoveredRackId((current) => (current === rack.id ? null : current))}
-                        className="absolute"
+                        className="absolute left-1/2 top-1/2"
                         style={{
-                          left: rack.x * meterToPixel,
-                          top: rack.z * meterToPixel,
+                          left: '50%',
+                          top: '50%',
                           width: rackWidthPx,
                           height: rackDepthPx,
                           transformStyle: 'preserve-3d',
                           transformOrigin: 'center center',
-                          transform: `translateZ(1px) rotate(${rack.rotation_y}deg)`
+                          transform: `translate3d(${rackCenterOnFloorX}px, ${rackCenterOnFloorZ}px, 1px) rotateZ(${rack.rotation_y}deg)`
                         }}
                       >
-                        <div className="absolute inset-0 rounded-[4px] border border-white/25 bg-slate-900/70" />
-
                         <div
                           className={`absolute bottom-0 left-0 rounded-[3px] border ${isSelected ? 'border-cyan-300' : 'border-slate-500'} bg-slate-900/95`}
                           style={{
                             width: rackWidthPx,
                             height: rackHeightPx,
-                            transform: `translateY(${-rackHeightPx + 1}px) translateZ(${rackDepthPx * 0.5}px)`
+                            transform: `translateY(${rackLiftY}px) translateZ(${rackHalfDepth}px)`
                           }}
                         >
                           <div className="absolute inset-[4px] rounded-[2px] border border-emerald-300/30 bg-slate-950/90">
@@ -264,7 +324,7 @@ export function FloorPlanScene({
                             width: rackDepthPx,
                             height: rackHeightPx,
                             transformOrigin: 'left bottom',
-                            transform: `translateY(${-rackHeightPx + 1}px) rotateY(90deg)`
+                            transform: `translateY(${rackLiftY}px) rotateY(90deg)`
                           }}
                         />
                         <div
@@ -273,15 +333,31 @@ export function FloorPlanScene({
                             width: rackDepthPx,
                             height: rackHeightPx,
                             transformOrigin: 'right bottom',
-                            transform: `translateY(${-rackHeightPx + 1}px) rotateY(-90deg)`
+                            transform: `translateY(${rackLiftY}px) rotateY(-90deg)`
                           }}
                         />
                         <div
-                          className="absolute left-0 top-0 rounded-[3px] border border-slate-500/80 bg-slate-800/80"
+                          className={`absolute bottom-0 left-0 rounded-[3px] border ${isSelected ? 'border-cyan-300/80' : 'border-slate-700'} bg-slate-950/95`}
+                          style={{
+                            width: rackWidthPx,
+                            height: rackHeightPx,
+                            transform: `translateY(${rackLiftY}px) translateZ(${-rackHalfDepth}px)`
+                          }}
+                        />
+                        <div
+                          className="absolute left-0 top-0 rounded-[3px] border border-slate-500/80 bg-slate-800/90"
                           style={{
                             width: rackWidthPx,
                             height: rackDepthPx,
-                            transform: `translateY(${-rackHeightPx + 1}px) translateZ(${rackDepthPx * 0.5}px)`
+                            transform: `translateY(${rackLiftY}px) translateZ(${rackHalfDepth}px)`
+                          }}
+                        />
+                        <div
+                          className="absolute left-0 top-0 rounded-[3px] border border-slate-800/90 bg-slate-950/95"
+                          style={{
+                            width: rackWidthPx,
+                            height: rackDepthPx,
+                            transform: 'translateY(0px) translateZ(0px)'
                           }}
                         />
 

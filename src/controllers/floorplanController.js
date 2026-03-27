@@ -48,7 +48,6 @@ const parseJsonSafe = (value, fallback) => {
   }
 };
 
-<<<<<<< HEAD
 const toNumber = (value, fallback) => {
   if (value === undefined || value === null || value === '') {
     return fallback;
@@ -62,11 +61,6 @@ const normalizeRack = (row) => ({
   id: Number(row.id),
   floorplan_id: Number(row.floorplan_id),
   switch_cabinet_id: row.switch_cabinet_id === null || row.switch_cabinet_id === undefined ? null : Number(row.switch_cabinet_id),
-=======
-const normalizeRack = (row) => ({
-  id: Number(row.id),
-  floorplan_id: Number(row.floorplan_id),
->>>>>>> origin/main
   name: row.name,
   x: Number(row.x),
   y: Number(row.y),
@@ -76,7 +70,7 @@ const normalizeRack = (row) => ({
   depth: Number(row.depth),
   height: Number(row.height),
   unit_capacity: Number(row.unit_capacity),
-<<<<<<< HEAD
+
   equipment: parseJsonSafe(row.equipment_json, []),
   serial_number: row.serial_number ?? null,
   energy_consumption: row.energy_consumption === undefined || row.energy_consumption === null ? null : Number(row.energy_consumption),
@@ -84,24 +78,18 @@ const normalizeRack = (row) => ({
   weight: row.weight === undefined || row.weight === null ? null : Number(row.weight),
   zone_name: row.zone_name ?? null,
   equipment_count: row.equipment_count === undefined || row.equipment_count === null ? parseJsonSafe(row.equipment_json, []).length : Number(row.equipment_count)
-=======
-  equipment: parseJsonSafe(row.equipment_json, [])
->>>>>>> origin/main
+
 });
 
 const normalizeFloorPlan = (row) => ({
   id: Number(row.id),
-<<<<<<< HEAD
   zone_id: Number(row.zone_id),
   zone_name: row.zone_name ?? null,
-=======
->>>>>>> origin/main
   name: row.name,
   description: row.description,
   width: Number(row.width),
   depth: Number(row.depth),
   height: Number(row.height),
-<<<<<<< HEAD
   panel_size_x: Number(row.panel_size_x),
   panel_size_y: Number(row.panel_size_y),
   scale: Number(row.scale),
@@ -139,19 +127,6 @@ const getFloorPlanWithRacks = async (id, ownerUserId) => {
      INNER JOIN zones z ON z.id = fp.zone_id
      WHERE fp.id = ? AND fp.owner_user_id = ? AND z.owner_user_id = ?`,
     [id, ownerUserId, ownerUserId]
-=======
-  camera: parseJsonSafe(row.camera_json, {}),
-  created_at: row.created_at,
-  updated_at: row.updated_at
-});
-
-const getFloorPlanWithRacks = async (id, ownerUserId) => {
-  const floorPlanRow = await get(
-    `SELECT id, name, description, width, depth, height, camera_json, created_at, updated_at
-     FROM floorplans
-     WHERE id = ? AND owner_user_id = ?`,
-    [id, ownerUserId]
->>>>>>> origin/main
   );
 
   if (!floorPlanRow) {
@@ -159,7 +134,6 @@ const getFloorPlanWithRacks = async (id, ownerUserId) => {
   }
 
   const rackRows = await all(
-<<<<<<< HEAD
     `SELECT fr.id, fr.floorplan_id, fr.switch_cabinet_id, fr.name, fr.x, fr.y, fr.z, fr.rotation_y,
             fr.width, fr.depth, fr.height, fr.unit_capacity, fr.equipment_json,
             sc.serial_number, sc.energy_consumption, sc.energy_limit, sc.weight, z.name AS zone_name,
@@ -169,12 +143,6 @@ const getFloorPlanWithRacks = async (id, ownerUserId) => {
      LEFT JOIN zones z ON z.id = sc.zone_id AND z.owner_user_id = fr.owner_user_id
      WHERE fr.floorplan_id = ? AND fr.owner_user_id = ?
      ORDER BY fr.id ASC`,
-=======
-    `SELECT id, floorplan_id, name, x, y, z, rotation_y, width, depth, height, unit_capacity, equipment_json
-     FROM floorplan_racks
-     WHERE floorplan_id = ? AND owner_user_id = ?
-     ORDER BY id ASC`,
->>>>>>> origin/main
     [id, ownerUserId]
   );
 
@@ -186,16 +154,13 @@ const getFloorPlanWithRacks = async (id, ownerUserId) => {
 
 export const createFloorPlan = async (req, res) => {
   const {
-<<<<<<< HEAD
+
     zone_id,
-=======
->>>>>>> origin/main
     name,
     description,
     width = 12,
     depth = 8,
     height = 3,
-<<<<<<< HEAD
     panel_size_x = 0.6,
     panel_size_y = 0.6,
     scale = 1,
@@ -208,18 +173,10 @@ export const createFloorPlan = async (req, res) => {
 
   if (!name || !zone_id) {
     return res.status(400).json({ error: 'Название плана и zone_id обязательны' });
-=======
-    camera = {}
-  } = req.body;
-
-  if (!name) {
-    return res.status(400).json({ error: 'Название плана обязательно' });
->>>>>>> origin/main
   }
 
   try {
     const ownerUserId = getOwnerUserId(req);
-<<<<<<< HEAD
     const zone = await ensureZoneExists(zone_id, ownerUserId);
 
     if (!zone) {
@@ -253,12 +210,6 @@ export const createFloorPlan = async (req, res) => {
         JSON.stringify(camera ?? {}),
         ownerUserId
       ]
-=======
-    const result = await run(
-      `INSERT INTO floorplans (name, description, width, depth, height, camera_json, owner_user_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [name, description ?? null, width, depth, height, JSON.stringify(camera ?? {}), ownerUserId]
->>>>>>> origin/main
     );
 
     const payload = await getFloorPlanWithRacks(result.lastID, ownerUserId);
@@ -273,7 +224,6 @@ export const createFloorPlan = async (req, res) => {
 export const listFloorPlans = async (req, res) => {
   try {
     const rows = await all(
-<<<<<<< HEAD
       `SELECT fp.id, fp.zone_id, z.name AS zone_name, fp.name, fp.description, fp.width, fp.depth, fp.height,
               fp.panel_size_x, fp.panel_size_y, fp.scale, fp.grid_enabled, fp.axis_x_label, fp.axis_y_label,
               fp.background_image_url, fp.camera_json, fp.created_at, fp.updated_at
@@ -282,13 +232,6 @@ export const listFloorPlans = async (req, res) => {
        WHERE fp.owner_user_id = ? AND z.owner_user_id = ?
        ORDER BY fp.updated_at DESC, fp.id DESC`,
       [getOwnerUserId(req), getOwnerUserId(req)]
-=======
-      `SELECT id, name, description, width, depth, height, camera_json, created_at, updated_at
-       FROM floorplans
-       WHERE owner_user_id = ?
-       ORDER BY updated_at DESC, id DESC`,
-      [getOwnerUserId(req)]
->>>>>>> origin/main
     );
 
     return res.status(200).json(rows.map(normalizeFloorPlan));
@@ -300,7 +243,6 @@ export const listFloorPlans = async (req, res) => {
 
 export const updateFloorPlan = async (req, res) => {
   const { id } = req.params;
-<<<<<<< HEAD
   const {
     zone_id,
     name,
@@ -317,14 +259,10 @@ export const updateFloorPlan = async (req, res) => {
     background_image_url,
     camera
   } = req.body;
-=======
-  const { name, description, width, depth, height, camera } = req.body;
->>>>>>> origin/main
 
   const fields = [];
   const values = [];
 
-<<<<<<< HEAD
   const appendField = (fieldName, value, formatter = (source) => source) => {
     if (value !== undefined) {
       fields.push(`${fieldName} = ?`);
@@ -373,48 +311,6 @@ export const updateFloorPlan = async (req, res) => {
     fields.push('updated_at = CURRENT_TIMESTAMP');
 
     values.push(id, ownerUserId);
-=======
-  if (name !== undefined) {
-    fields.push('name = ?');
-    values.push(name);
-  }
-
-  if (description !== undefined) {
-    fields.push('description = ?');
-    values.push(description);
-  }
-
-  if (width !== undefined) {
-    fields.push('width = ?');
-    values.push(width);
-  }
-
-  if (depth !== undefined) {
-    fields.push('depth = ?');
-    values.push(depth);
-  }
-
-  if (height !== undefined) {
-    fields.push('height = ?');
-    values.push(height);
-  }
-
-  if (camera !== undefined) {
-    fields.push('camera_json = ?');
-    values.push(JSON.stringify(camera ?? {}));
-  }
-
-  if (!fields.length) {
-    return res.status(400).json({ error: 'Передайте хотя бы одно поле для обновления' });
-  }
-
-  fields.push('updated_at = CURRENT_TIMESTAMP');
-
-  try {
-    const ownerUserId = getOwnerUserId(req);
-    values.push(id, ownerUserId);
-
->>>>>>> origin/main
     const result = await run(
       `UPDATE floorplans
        SET ${fields.join(', ')}
@@ -474,10 +370,7 @@ export const getFloorPlan3DView = async (req, res) => {
 export const createRack = async (req, res) => {
   const {
     floorplan_id,
-<<<<<<< HEAD
     switch_cabinet_id = null,
-=======
->>>>>>> origin/main
     name,
     x = 0,
     y = 0,
@@ -497,11 +390,7 @@ export const createRack = async (req, res) => {
   try {
     const ownerUserId = getOwnerUserId(req);
     const floorPlan = await get(
-<<<<<<< HEAD
       `SELECT id, zone_id FROM floorplans WHERE id = ? AND owner_user_id = ?`,
-=======
-      `SELECT id FROM floorplans WHERE id = ? AND owner_user_id = ?`,
->>>>>>> origin/main
       [floorplan_id, ownerUserId]
     );
 
@@ -509,7 +398,6 @@ export const createRack = async (req, res) => {
       return res.status(404).json({ error: 'План помещения не найден' });
     }
 
-<<<<<<< HEAD
     if (switch_cabinet_id !== null) {
       const cabinet = await get(
         `SELECT id, zone_id FROM switch_cabinets WHERE id = ? AND owner_user_id = ?`,
@@ -555,18 +443,6 @@ export const createRack = async (req, res) => {
        LEFT JOIN switch_cabinets sc ON sc.id = fr.switch_cabinet_id AND sc.owner_user_id = fr.owner_user_id
        LEFT JOIN zones z ON z.id = sc.zone_id AND z.owner_user_id = fr.owner_user_id
        WHERE fr.id = ? AND fr.owner_user_id = ?`,
-=======
-    const result = await run(
-      `INSERT INTO floorplan_racks
-       (floorplan_id, name, x, y, z, rotation_y, width, depth, height, unit_capacity, equipment_json, owner_user_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [floorplan_id, name, x, y, z, rotation_y, width, depth, height, unit_capacity, JSON.stringify(equipment), ownerUserId]
-    );
-
-    const rackRow = await get(
-      `SELECT id, floorplan_id, name, x, y, z, rotation_y, width, depth, height, unit_capacity, equipment_json
-       FROM floorplan_racks WHERE id = ? AND owner_user_id = ?`,
->>>>>>> origin/main
       [result.lastID, ownerUserId]
     );
 
@@ -579,16 +455,10 @@ export const createRack = async (req, res) => {
 
 export const updateRack = async (req, res) => {
   const { id } = req.params;
-<<<<<<< HEAD
   const { switch_cabinet_id, name, x, y, z, rotation_y, width, depth, height, unit_capacity, equipment } = req.body;
-=======
-  const { name, x, y, z, rotation_y, width, depth, height, unit_capacity, equipment } = req.body;
->>>>>>> origin/main
 
   const fields = [];
   const values = [];
-
-<<<<<<< HEAD
   const appendField = (fieldName, value, formatter = (source) => source) => {
     if (value !== undefined) {
       fields.push(`${fieldName} = ?`);
@@ -606,24 +476,6 @@ export const updateRack = async (req, res) => {
   appendField('depth', depth, (value) => toNumber(value, 1));
   appendField('height', height, (value) => toNumber(value, 2));
   appendField('unit_capacity', unit_capacity, (value) => toNumber(value, 42));
-=======
-  const appendField = (fieldName, value) => {
-    if (value !== undefined) {
-      fields.push(`${fieldName} = ?`);
-      values.push(value);
-    }
-  };
-
-  appendField('name', name);
-  appendField('x', x);
-  appendField('y', y);
-  appendField('z', z);
-  appendField('rotation_y', rotation_y);
-  appendField('width', width);
-  appendField('depth', depth);
-  appendField('height', height);
-  appendField('unit_capacity', unit_capacity);
->>>>>>> origin/main
 
   if (equipment !== undefined) {
     appendField('equipment_json', JSON.stringify(equipment));
@@ -647,7 +499,6 @@ export const updateRack = async (req, res) => {
     }
 
     const rackRow = await get(
-<<<<<<< HEAD
       `SELECT fr.id, fr.floorplan_id, fr.switch_cabinet_id, fr.name, fr.x, fr.y, fr.z, fr.rotation_y, fr.width, fr.depth,
               fr.height, fr.unit_capacity, fr.equipment_json,
               sc.serial_number, sc.energy_consumption, sc.energy_limit, sc.weight, z.name AS zone_name,
@@ -656,10 +507,6 @@ export const updateRack = async (req, res) => {
        LEFT JOIN switch_cabinets sc ON sc.id = fr.switch_cabinet_id AND sc.owner_user_id = fr.owner_user_id
        LEFT JOIN zones z ON z.id = sc.zone_id AND z.owner_user_id = fr.owner_user_id
        WHERE fr.id = ? AND fr.owner_user_id = ?`,
-=======
-      `SELECT id, floorplan_id, name, x, y, z, rotation_y, width, depth, height, unit_capacity, equipment_json
-       FROM floorplan_racks WHERE id = ? AND owner_user_id = ?`,
->>>>>>> origin/main
       [id, getOwnerUserId(req)]
     );
 
@@ -695,7 +542,6 @@ export const getRack2DView = async (req, res) => {
 
   try {
     const rackRow = await get(
-<<<<<<< HEAD
       `SELECT fr.id, fr.floorplan_id, fr.switch_cabinet_id, fr.name, fr.x, fr.y, fr.z, fr.rotation_y, fr.width, fr.depth,
               fr.height, fr.unit_capacity, fr.equipment_json,
               sc.serial_number, sc.energy_consumption, sc.energy_limit, sc.weight, z.name AS zone_name,
@@ -704,11 +550,6 @@ export const getRack2DView = async (req, res) => {
        LEFT JOIN switch_cabinets sc ON sc.id = fr.switch_cabinet_id AND sc.owner_user_id = fr.owner_user_id
        LEFT JOIN zones z ON z.id = sc.zone_id AND z.owner_user_id = fr.owner_user_id
        WHERE fr.id = ? AND fr.owner_user_id = ?`,
-=======
-      `SELECT id, floorplan_id, name, x, y, z, rotation_y, width, depth, height, unit_capacity, equipment_json
-       FROM floorplan_racks
-       WHERE id = ? AND owner_user_id = ?`,
->>>>>>> origin/main
       [id, getOwnerUserId(req)]
     );
 

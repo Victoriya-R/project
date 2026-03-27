@@ -82,7 +82,9 @@ export interface FloorPlanRackEquipment {
 export interface FloorPlanRack {
   id: number;
   floorplan_id: number;
+
   switch_cabinet_id?: number | null;
+
   name: string;
   x: number;
   y: number;
@@ -93,16 +95,19 @@ export interface FloorPlanRack {
   height: number;
   unit_capacity: number;
   equipment: FloorPlanRackEquipment[];
+
   serial_number?: string | null;
   energy_consumption?: number | null;
   energy_limit?: number | null;
   weight?: number | null;
   zone_name?: string | null;
   equipment_count?: number;
+
 }
 
 export interface FloorPlan {
   id: number;
+
   zone_id: number;
   zone_name?: string | null;
   name: string;

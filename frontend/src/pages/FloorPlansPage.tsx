@@ -42,26 +42,28 @@ export function FloorPlansPage() {
   const zonesQuery = useApiQuery({ queryKey: ['zone-list'], queryFn: zonesApi.list });
   const cabinetsQuery = useApiQuery({ queryKey: ['cabinet-list'], queryFn: switchCabinetsApi.list });
 
-  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
-  const [selectedRackId, setSelectedRackId] = useState<number | null>(null);
+
   const [mode, setMode] = useState<'2d' | '3d'>('2d');
   const [planFormOpen, setPlanFormOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<FloorPlan | null>(null);
   const [planForm, setPlanForm] = useState<PlanFormState>(defaultPlanForm);
-  const [newRackName, setNewRackName] = useState('');
   const [newRackCabinetId, setNewRackCabinetId] = useState('');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [planDraft, setPlanDraft] = useState<FloorPlan | null>(null);
   const saveTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
-
-  const plans = plansQuery.data?.data ?? [];
   const zones = zonesQuery.data?.data ?? [];
   const cabinets = cabinetsQuery.data?.data ?? [];
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+  const [selectedRackId, setSelectedRackId] = useState<number | null>(null);
+  const [newRackName, setNewRackName] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const plans = plansQuery.data?.data ?? [];
   const selectedPlan = useMemo(() => plans.find((item) => item.id === selectedPlanId) ?? plans[0] ?? null, [plans, selectedPlanId]);
 
   useEffect(() => {
     if (!selectedPlan && selectedPlanId !== null) {
       setSelectedPlanId(null);
+ 
       setSelectedRackId(null);
       return;
     }
@@ -77,11 +79,13 @@ export function FloorPlansPage() {
     enabled: Boolean(selectedPlan?.id)
   });
 
+
   useEffect(() => {
     if (detailQuery.data?.data) {
       setPlanDraft(detailQuery.data.data);
     }
   }, [detailQuery.data]);
+
 
   const invalidate = async () => {
     await Promise.all([
@@ -93,6 +97,7 @@ export function FloorPlansPage() {
   const createPlan = useMutation({
     mutationFn: floorplansApi.create,
     onSuccess: async () => {
+
       setPlanForm(defaultPlanForm);
       setPlanFormOpen(false);
       setErrorMessage(null);
@@ -127,6 +132,7 @@ export function FloorPlansPage() {
     mutationFn: floorplansApi.createRack,
     onSuccess: async () => {
       setNewRackName('');
+
       setNewRackCabinetId('');
       setErrorMessage(null);
       await invalidate();
@@ -222,6 +228,7 @@ export function FloorPlansPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+
         title="План помещения"
         description="Основной режим редактирования — 2D. 3D режим используется для визуального контроля размещения стоек."
         breadcrumbs={<Breadcrumbs items={[{ label: 'Dashboard', href: '/' }, { label: 'Floor Plan' }]} />}
@@ -238,15 +245,18 @@ export function FloorPlansPage() {
             key: 'actions',
             header: 'Действия',
             render: (row: FloorPlan) => (
+
               <div className="flex items-center gap-2">
                 <Button variant="ghost" className="px-2.5" onClick={() => openEditPlan(row)}><Pencil className="h-4 w-4" /></Button>
                 <Button variant="ghost" className="px-2.5" onClick={() => removePlan.mutate(row.id)}><Trash2 className="h-4 w-4" /></Button>
               </div>
+
             )
           }
         ]}
         data={plans}
       />
+
 
       {!selectedPlanDraft ? (
         <EmptyState
@@ -271,6 +281,7 @@ export function FloorPlansPage() {
             <Button
               icon={<Plus className="h-4 w-4" />}
               onClick={() => createRack.mutate({
+
                 floorplan_id: selectedPlanDraft.id,
                 switch_cabinet_id: newRackCabinetId ? Number(newRackCabinetId) : null,
                 name: newRackName || `Rittal-${(selectedPlanDraft.racks?.length ?? 0) + 1}`,
@@ -288,6 +299,7 @@ export function FloorPlansPage() {
           </div>
 
           <FloorPlanScene
+
             floorPlan={selectedPlanDraft}
             selectedRackId={selectedRackId}
             mode={mode}
@@ -373,7 +385,6 @@ export function FloorPlansPage() {
           <Button onClick={upsertPlan}>{editingPlan ? 'Сохранить изменения' : 'Создать план'}</Button>
         </div>
       </Modal>
-
       {errorMessage ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{errorMessage}</div> : null}
     </div>
   );

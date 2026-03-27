@@ -220,6 +220,7 @@ export const floorplansApi = {
     id,
     zone_id: 0,
     zone_name: 'N/A',
+
     name: 'Demo floor plan',
     description: 'Fallback scene',
     width: 12,
@@ -232,6 +233,7 @@ export const floorplansApi = {
     axis_x_label: 'X',
     axis_y_label: 'Y',
     background_image_url: null,
+
     camera: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

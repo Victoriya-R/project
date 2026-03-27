@@ -20,6 +20,10 @@ const router = express.Router();
  *     tags:
  *       - Floor Plans
  *     summary: Создание нового плана помещения
+<<<<<<< HEAD
+=======
+ *     description: Создаёт план помещения для последующего 3D-отображения со стойками и оборудованием.
+>>>>>>> origin/main
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -28,6 +32,7 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             type: object
+<<<<<<< HEAD
  *             required: [zone_id, name]
  *             properties:
  *               zone_id:
@@ -38,6 +43,16 @@ const router = express.Router();
  *                 example: Машзал А
  *               description:
  *                 type: string
+=======
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Основной зал №1
+ *               description:
+ *                 type: string
+ *                 example: План основного серверного помещения
+>>>>>>> origin/main
  *               width:
  *                 type: number
  *                 example: 18
@@ -47,6 +62,7 @@ const router = express.Router();
  *               height:
  *                 type: number
  *                 example: 3.5
+<<<<<<< HEAD
  *               panel_size_x:
  *                 type: number
  *                 example: 0.6
@@ -74,6 +90,16 @@ const router = express.Router();
  *         description: План помещения создан
  *       409:
  *         description: Для зоны уже существует план
+=======
+ *               camera:
+ *                 type: object
+ *                 description: Начальные параметры камеры 3D сцены
+ *     responses:
+ *       201:
+ *         description: План помещения создан
+ *       400:
+ *         description: Некорректный запрос
+>>>>>>> origin/main
  */
 router.post('/floorplan/create', createFloorPlan);
 
@@ -114,8 +140,11 @@ router.get('/floorplan', listFloorPlans);
  *           schema:
  *             type: object
  *             properties:
+<<<<<<< HEAD
  *               zone_id:
  *                 type: integer
+=======
+>>>>>>> origin/main
  *               name:
  *                 type: string
  *               description:
@@ -124,17 +153,27 @@ router.get('/floorplan', listFloorPlans);
  *                 type: number
  *               depth:
  *                 type: number
+<<<<<<< HEAD
  *               panel_size_x:
  *                 type: number
  *               panel_size_y:
  *                 type: number
  *               background_image_url:
  *                 type: string
+=======
+ *               height:
+ *                 type: number
+>>>>>>> origin/main
  *               camera:
  *                 type: object
  *     responses:
  *       200:
  *         description: План помещения обновлён
+<<<<<<< HEAD
+=======
+ *       404:
+ *         description: План помещения не найден
+>>>>>>> origin/main
  */
 router.put('/floorplan/update/:id', updateFloorPlan);
 
@@ -156,6 +195,11 @@ router.put('/floorplan/update/:id', updateFloorPlan);
  *     responses:
  *       200:
  *         description: План помещения удалён
+<<<<<<< HEAD
+=======
+ *       404:
+ *         description: План помещения не найден
+>>>>>>> origin/main
  */
 router.delete('/floorplan/delete/:id', deleteFloorPlan);
 
@@ -165,7 +209,12 @@ router.delete('/floorplan/delete/:id', deleteFloorPlan);
  *   get:
  *     tags:
  *       - Floor Plans
+<<<<<<< HEAD
  *     summary: Получение 3D/2D данных плана помещения
+=======
+ *     summary: Получение 3D представления плана помещения
+ *     description: Возвращает план помещения с геометрией, стойками и вложенным оборудованием для рендера 3D сцены.
+>>>>>>> origin/main
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -176,7 +225,13 @@ router.delete('/floorplan/delete/:id', deleteFloorPlan);
  *           type: integer
  *     responses:
  *       200:
+<<<<<<< HEAD
  *         description: Данные плана помещения со стойками
+=======
+ *         description: 3D представление плана помещения
+ *       404:
+ *         description: План помещения не найден
+>>>>>>> origin/main
  */
 router.get('/floorplan/:id', getFloorPlan3DView);
 
@@ -199,15 +254,27 @@ router.get('/floorplan/:id', getFloorPlan3DView);
  *             properties:
  *               floorplan_id:
  *                 type: integer
+<<<<<<< HEAD
  *               switch_cabinet_id:
  *                 type: integer
  *                 nullable: true
+=======
+>>>>>>> origin/main
  *               name:
  *                 type: string
  *               x:
  *                 type: number
+<<<<<<< HEAD
  *               z:
  *                 type: number
+=======
+ *               y:
+ *                 type: number
+ *               z:
+ *                 type: number
+ *               rotation_y:
+ *                 type: number
+>>>>>>> origin/main
  *               width:
  *                 type: number
  *               depth:
@@ -247,9 +314,32 @@ router.post('/rack/create', createRack);
  *         application/json:
  *           schema:
  *             type: object
+<<<<<<< HEAD
  *     responses:
  *       200:
  *         description: Стойка обновлена
+=======
+ *             properties:
+ *               name:
+ *                 type: string
+ *               x:
+ *                 type: number
+ *               y:
+ *                 type: number
+ *               z:
+ *                 type: number
+ *               rotation_y:
+ *                 type: number
+ *               equipment:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       200:
+ *         description: Стойка обновлена
+ *       404:
+ *         description: Стойка не найдена
+>>>>>>> origin/main
  */
 router.put('/rack/update/:id', updateRack);
 
@@ -281,6 +371,10 @@ router.delete('/rack/delete/:id', deleteRack);
  *     tags:
  *       - Floor Plan Racks
  *     summary: Получение 2D вида стойки
+<<<<<<< HEAD
+=======
+ *     description: Возвращает данные выбранной стойки для детального 2D отображения юнитов и оборудования.
+>>>>>>> origin/main
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -292,6 +386,11 @@ router.delete('/rack/delete/:id', deleteRack);
  *     responses:
  *       200:
  *         description: 2D вид стойки
+<<<<<<< HEAD
+=======
+ *       404:
+ *         description: Стойка не найдена
+>>>>>>> origin/main
  */
 router.get('/rack/:id/2d', getRack2DView);
 

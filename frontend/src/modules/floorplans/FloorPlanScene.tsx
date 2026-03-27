@@ -72,6 +72,8 @@ export function FloorPlanScene({
 
   const selectedRack = racks.find((rack) => rack.id === selectedRackId) ?? null;
   const rackSlotPreviewLimit = 24;
+  const roomCenterX = roomPixelWidth / 2;
+  const roomCenterZ = roomPixelDepth / 2;
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
@@ -194,25 +196,29 @@ export function FloorPlanScene({
                   transformStyle: 'preserve-3d'
                 }}
               >
-                <div
-                  className="relative border border-white/20 bg-slate-700/70"
-                  style={{
-                    width: roomPixelWidth,
-                    height: roomPixelDepth,
-                    boxShadow: '0 24px 80px rgba(15, 23, 42, 0.55)'
-                  }}
-                >
+                <div className="relative" style={{ width: roomPixelWidth, height: roomPixelDepth, transformStyle: 'preserve-3d' }}>
+                  <div
+                    className="absolute left-1/2 top-1/2 border border-white/20 bg-slate-700/70"
+                    style={{
+                      width: roomPixelWidth,
+                      height: roomPixelDepth,
+                      transform: 'translate(-50%, -50%)',
+                      boxShadow: '0 24px 80px rgba(15, 23, 42, 0.55)'
+                    }}
+                  />
                   {racks.map((rack) => {
                     const isSelected = selectedRackId === rack.id;
-                    const rackWidthPx = Math.max(rack.width * meterToPixel, 30);
-                    const rackDepthPx = Math.max(rack.depth * meterToPixel, 44);
-                    const rackHeightPx = Math.max(rack.height * meterToPixel, 180);
+                    const rackWidthPx = Math.max(rack.width * meterToPixel, 16);
+                    const rackDepthPx = Math.max(rack.depth * meterToPixel, 26);
+                    const rackHeightPx = Math.max(rack.height * meterToPixel, 110);
                     const unitCapacity = Math.max(rack.unit_capacity, 1);
                     const visibleSlots = Math.min(unitCapacity, rackSlotPreviewLimit);
                     const unitsPerSlot = Math.max(1, Math.ceil(unitCapacity / visibleSlots));
                     const occupiedUnits = rack.equipment.reduce((sum, equipment) => sum + Math.max(equipment.unit || 1, 1), 0);
                     const occupancyRate = clamp(occupiedUnits / unitCapacity, 0, 1);
                     const occupiedSlotCount = Math.round(visibleSlots * occupancyRate);
+                    const rackCenterOnFloorX = rack.x * meterToPixel + rackWidthPx / 2 - roomCenterX;
+                    const rackCenterOnFloorZ = rack.z * meterToPixel + rackDepthPx / 2 - roomCenterZ;
 
                     return (
                       <button
@@ -221,19 +227,17 @@ export function FloorPlanScene({
                         onClick={() => onSelectRack(rack)}
                         onMouseEnter={() => setHoveredRackId(rack.id)}
                         onMouseLeave={() => setHoveredRackId((current) => (current === rack.id ? null : current))}
-                        className="absolute"
+                        className="absolute left-1/2 top-1/2"
                         style={{
-                          left: rack.x * meterToPixel,
-                          top: rack.z * meterToPixel,
+                          left: '50%',
+                          top: '50%',
                           width: rackWidthPx,
                           height: rackDepthPx,
                           transformStyle: 'preserve-3d',
                           transformOrigin: 'center center',
-                          transform: `translateZ(1px) rotate(${rack.rotation_y}deg)`
+                          transform: `translate3d(${rackCenterOnFloorX}px, ${rackCenterOnFloorZ}px, 1px) rotateZ(${rack.rotation_y}deg)`
                         }}
                       >
-                        <div className="absolute inset-0 rounded-[4px] border border-white/25 bg-slate-900/70" />
-
                         <div
                           className={`absolute bottom-0 left-0 rounded-[3px] border ${isSelected ? 'border-cyan-300' : 'border-slate-500'} bg-slate-900/95`}
                           style={{
@@ -277,7 +281,7 @@ export function FloorPlanScene({
                           }}
                         />
                         <div
-                          className="absolute left-0 top-0 rounded-[3px] border border-slate-500/80 bg-slate-800/80"
+                          className="absolute left-0 top-0 rounded-[3px] border border-slate-500/80 bg-slate-800/90"
                           style={{
                             width: rackWidthPx,
                             height: rackDepthPx,

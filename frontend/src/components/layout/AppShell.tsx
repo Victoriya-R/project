@@ -1,5 +1,5 @@
 import { PropsWithChildren, useMemo } from 'react';
-import { Activity, Cable, ChartColumn, Cpu, LayoutDashboard, LockKeyhole, LogOut, Map, ShieldCheck, SquareStack, Unplug } from 'lucide-react';
+import { Activity, Cable, ChartColumn, Cpu, LayoutDashboard, LockKeyhole, LogOut, Map, ShieldCheck, SquareStack, Unplug, Boxes } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth-store';
 import { useI18n } from '../../i18n/provider';
@@ -24,6 +24,7 @@ export function AppShell({ children }: PropsWithChildren) {
     { to: '/connections', label: t('nav.connections'), icon: Activity },
     { to: '/cables', label: t('nav.cables'), icon: Cable },
     { to: '/reports', label: t('nav.reports'), icon: ChartColumn },
+    { to: '/floorplans', label: '3D планы', icon: Boxes },
     { to: '/access-management', label: 'Управление доступом', icon: LockKeyhole, disabled: !isSuperuser }
   ];
 

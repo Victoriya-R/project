@@ -70,6 +70,61 @@ export interface Zone {
   site?: string;
 }
 
+
+export interface FloorPlanRackEquipment {
+  id: number;
+  name: string;
+  unit: number;
+  type?: string;
+  status?: EntityStatus;
+}
+
+export interface FloorPlanRack {
+  id: number;
+  floorplan_id: number;
+  switch_cabinet_id?: number | null;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  rotation_y: number;
+  width: number;
+  depth: number;
+  height: number;
+  unit_capacity: number;
+  equipment: FloorPlanRackEquipment[];
+  serial_number?: string | null;
+  energy_consumption?: number | null;
+  energy_limit?: number | null;
+  weight?: number | null;
+  zone_name?: string | null;
+  equipment_count?: number;
+}
+
+export interface FloorPlan {
+  id: number;
+  zone_id: number;
+  zone_name?: string | null;
+  name: string;
+  description?: string;
+  width: number;
+  depth: number;
+  height: number;
+  panel_size_x: number;
+  panel_size_y: number;
+  scale: number;
+  grid_enabled: boolean;
+  axis_x_label: string;
+  axis_y_label: string;
+  background_image_url?: string | null;
+  grid_cells_x?: number;
+  grid_cells_y?: number;
+  camera: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  racks?: FloorPlanRack[];
+}
+
 export interface Cable {
   id: number;
   type: CableType;

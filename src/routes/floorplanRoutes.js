@@ -20,7 +20,9 @@ const router = express.Router();
  *     tags:
  *       - Floor Plans
  *     summary: Создание нового плана помещения
+
  *     description: Создаёт план помещения для последующего 3D-отображения со стойками и оборудованием.
+(swagger)
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -29,6 +31,8 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             type: object
+
+
  *             required: [zone_id, name]
  *             properties:
  *               zone_id:
@@ -36,10 +40,12 @@ const router = express.Router();
  *                 example: 1
  *               name:
  *                 type: string
+
  *                 example: Основной зал №1
  *               description:
  *                 type: string
  *                 example: План основного серверного помещения
+
  *               width:
  *                 type: number
  *                 example: 18
@@ -73,12 +79,14 @@ const router = express.Router();
  *                 example: https://example.com/floor-a.png
  *               camera:
  *                 type: object
+<<<<<<< HEAD
  *                 description: Начальные параметры камеры 3D сцены
  *     responses:
  *       201:
  *         description: План помещения создан
  *       404:
  *         description: Зона не найдена
+
  *       409:
  *         description: Для зоны уже существует план
  */
@@ -346,7 +354,10 @@ router.delete('/rack/delete/:id', deleteRack);
  *     tags:
  *       - Floor Plan Racks
  *     summary: Получение 2D вида стойки
+<<<<<<< HEAD
  *     description: Возвращает данные выбранной стойки для детального 2D отображения юнитов и оборудования.
+=======
+>>>>>>> 4c11647 (swagger)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -358,8 +369,11 @@ router.delete('/rack/delete/:id', deleteRack);
  *     responses:
  *       200:
  *         description: 2D вид стойки
+<<<<<<< HEAD
  *       404:
  *         description: Стойка не найдена
+=======
+>>>>>>> 4c11647 (swagger)
  */
 router.get('/rack/:id/2d', getRack2DView);
 

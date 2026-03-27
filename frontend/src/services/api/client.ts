@@ -218,11 +218,22 @@ export const floorplansApi = {
   remove: async (id: number) => (await api.delete(`/api/floorplan/delete/${id}`)).data,
   detail3d: (id: number) => withFallback<FloorPlan>(`/api/floorplan/${id}`, async () => (await api.get(`/api/floorplan/${id}`)).data, () => ({
     id,
+    zone_id: 0,
+    zone_name: 'N/A',
+
     name: 'Demo floor plan',
     description: 'Fallback scene',
     width: 12,
     depth: 8,
     height: 3,
+    panel_size_x: 0.6,
+    panel_size_y: 0.6,
+    scale: 1,
+    grid_enabled: true,
+    axis_x_label: 'X',
+    axis_y_label: 'Y',
+    background_image_url: null,
+
     camera: {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

@@ -128,15 +128,34 @@ const createFloorPlansTable = async () => {
   await run(`
     CREATE TABLE IF NOT EXISTS floorplans (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+<<<<<<< HEAD
+      zone_id INTEGER NOT NULL,
+=======
+>>>>>>> origin/main
       name TEXT NOT NULL,
       description TEXT,
       width REAL NOT NULL DEFAULT 12,
       depth REAL NOT NULL DEFAULT 8,
       height REAL NOT NULL DEFAULT 3,
+<<<<<<< HEAD
+      panel_size_x REAL NOT NULL DEFAULT 0.6,
+      panel_size_y REAL NOT NULL DEFAULT 0.6,
+      scale REAL NOT NULL DEFAULT 1,
+      grid_enabled INTEGER NOT NULL DEFAULT 1,
+      axis_x_label TEXT NOT NULL DEFAULT 'X',
+      axis_y_label TEXT NOT NULL DEFAULT 'Y',
+      background_image_url TEXT,
+      camera_json TEXT,
+      owner_user_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(zone_id) REFERENCES zones(id) ON DELETE CASCADE
+=======
       camera_json TEXT,
       owner_user_id INTEGER,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+>>>>>>> origin/main
     )
   `);
 };
@@ -146,6 +165,10 @@ const createFloorPlanRacksTable = async () => {
     CREATE TABLE IF NOT EXISTS floorplan_racks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       floorplan_id INTEGER NOT NULL,
+<<<<<<< HEAD
+      switch_cabinet_id INTEGER,
+=======
+>>>>>>> origin/main
       name TEXT NOT NULL,
       x REAL NOT NULL DEFAULT 0,
       y REAL NOT NULL DEFAULT 0,
@@ -157,7 +180,12 @@ const createFloorPlanRacksTable = async () => {
       unit_capacity INTEGER NOT NULL DEFAULT 42,
       equipment_json TEXT,
       owner_user_id INTEGER,
+<<<<<<< HEAD
+      FOREIGN KEY(floorplan_id) REFERENCES floorplans(id) ON DELETE CASCADE,
+      FOREIGN KEY(switch_cabinet_id) REFERENCES switch_cabinets(id) ON DELETE SET NULL
+=======
       FOREIGN KEY(floorplan_id) REFERENCES floorplans(id) ON DELETE CASCADE
+>>>>>>> origin/main
     )
   `);
 };
@@ -305,16 +333,32 @@ const ensureBaseSchema = async () => {
   await ensureColumn('cables', 'owner_user_id', 'INTEGER');
   await ensureColumn('connections', 'owner_user_id', 'INTEGER');
   await ensureColumn('connections', 'status', `TEXT NOT NULL DEFAULT 'active'`);
+<<<<<<< HEAD
+  await ensureColumn('floorplans', 'zone_id', 'INTEGER');
+  await ensureColumn('floorplans', 'panel_size_x', 'REAL NOT NULL DEFAULT 0.6');
+  await ensureColumn('floorplans', 'panel_size_y', 'REAL NOT NULL DEFAULT 0.6');
+  await ensureColumn('floorplans', 'scale', 'REAL NOT NULL DEFAULT 1');
+  await ensureColumn('floorplans', 'grid_enabled', 'INTEGER NOT NULL DEFAULT 1');
+  await ensureColumn('floorplans', 'axis_x_label', `TEXT NOT NULL DEFAULT 'X'`);
+  await ensureColumn('floorplans', 'axis_y_label', `TEXT NOT NULL DEFAULT 'Y'`);
+  await ensureColumn('floorplans', 'background_image_url', 'TEXT');
+=======
+>>>>>>> origin/main
   await ensureColumn('floorplans', 'owner_user_id', 'INTEGER');
   await ensureColumn('floorplans', 'camera_json', 'TEXT');
   await ensureColumn('floorplans', 'created_at', `TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP`);
   await ensureColumn('floorplans', 'updated_at', `TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP`);
+<<<<<<< HEAD
+  await ensureColumn('floorplan_racks', 'switch_cabinet_id', 'INTEGER');
+=======
+>>>>>>> origin/main
   await ensureColumn('floorplan_racks', 'owner_user_id', 'INTEGER');
   await ensureColumn('floorplan_racks', 'equipment_json', 'TEXT');
 
   await normalizeSeedUsers();
   await createUniqueIndexIfMissing('users_username_unique_idx', 'users', 'username');
   await createUniqueIndexIfMissing('users_email_unique_idx', 'users', 'email');
+  await createUniqueIndexIfMissing('floorplans_zone_owner_unique_idx', 'floorplans', 'zone_id, owner_user_id');
 };
 
 const ensureSeedData = async () => {

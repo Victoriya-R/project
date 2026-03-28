@@ -215,6 +215,19 @@ const toNumberOrNull = (value: unknown): number | null => {
   return Number.isFinite(normalized) ? normalized : null;
 };
 
+const createStableSyntheticEquipmentId = (parts: unknown[]): number => {
+  const signature = parts
+    .map((part) => String(part ?? ''))
+    .join('|');
+
+  let hash = 0;
+  for (let index = 0; index < signature.length; index += 1) {
+    hash = (hash * 31 + signature.charCodeAt(index)) | 0;
+  }
+
+  return -Math.max(1, Math.abs(hash));
+};
+
 const resolveApiAssetUrl = (value: string | null | undefined): string | null => {
   if (!value) {
     return null;
@@ -234,22 +247,31 @@ const normalizeRackEquipment = (equipment: unknown): FloorPlanRack['equipment'] 
     return [];
   }
 
-  return equipment.reduce<FloorPlanRack['equipment']>((acc, item) => {
+  return equipment.reduce<FloorPlanRack['equipment']>((acc, item, index) => {
       if (!item || typeof item !== 'object') {
         return acc;
       }
 
       const source = item as Record<string, unknown>;
-      const id = toNumberOrNull(source.id ?? source.equipment_id);
-      if (id === null) {
-        return acc;
-      }
+      const startUnit = toNumberOrNull(source.startUnit ?? source.start_unit ?? source.position_u ?? source.u_position) ?? null;
+      const name = String(source.name ?? source.device_name ?? source.title ?? 'Оборудование');
+      const id = toNumberOrNull(source.id ?? source.equipment_id)
+        ?? createStableSyntheticEquipmentId([
+          source.id,
+          source.equipment_id,
+          source.device_id,
+          source.uuid,
+          source.serial_number,
+          name,
+          startUnit,
+          index
+        ]);
 
       acc.push({
         id,
-        name: String(source.name ?? source.device_name ?? source.title ?? 'Оборудование'),
+        name,
         unit: Math.max(1, toNumberOrNull(source.unit ?? source.size_u ?? source.units) ?? 1),
-        startUnit: toNumberOrNull(source.startUnit ?? source.start_unit ?? source.position_u ?? source.u_position) ?? null,
+        startUnit,
         type: source.type ? String(source.type) : undefined,
         status: source.status ? String(source.status) as FloorPlanRack['equipment'][number]['status'] : undefined
       });
@@ -279,7 +301,7 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
     occupiedUnits: Set<number>;
   };
 
-  const aggregatedByEquipmentId = new Map<number, SlotAggregate>();
+  const aggregatedByEquipmentKey = new Map<string, SlotAggregate>();
 
   slots.forEach((rawSlot) => {
     if (!rawSlot || typeof rawSlot !== 'object') {
@@ -309,9 +331,14 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
       return;
     }
 
-    const existing = aggregatedByEquipmentId.get(normalizedFromNested.id);
     const explicitStartUnit = toNumberOrNull(slotSource.start_unit) ?? normalizedFromNested.startUnit ?? null;
     const explicitUnits = toNumberOrNull(slotSource.size_u ?? slotSource.units ?? slotSource.unit_size) ?? normalizedFromNested.unit ?? null;
+    const dedupeKey = [
+      normalizedFromNested.id,
+      normalizedFromNested.name.trim().toLowerCase(),
+      explicitStartUnit ?? `slot:${slotUnit ?? 'unknown'}`
+    ].join('|');
+    const existing = aggregatedByEquipmentKey.get(dedupeKey);
 
     if (!existing) {
       const occupiedUnits = new Set<number>();
@@ -319,7 +346,7 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
         occupiedUnits.add(slotUnit);
       }
 
-      aggregatedByEquipmentId.set(normalizedFromNested.id, {
+      aggregatedByEquipmentKey.set(dedupeKey, {
         base: normalizedFromNested,
         minUnit: slotUnit,
         maxUnit: slotUnit,
@@ -349,7 +376,7 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
     }
   });
 
-  return Array.from(aggregatedByEquipmentId.values()).map((aggregate) => {
+  return Array.from(aggregatedByEquipmentKey.values()).map((aggregate) => {
     const occupiedUnits = aggregate.occupiedUnits.size;
     const inferredUnitsByRange = (aggregate.minUnit !== null && aggregate.maxUnit !== null)
       ? Math.max(1, aggregate.maxUnit - aggregate.minUnit + 1)

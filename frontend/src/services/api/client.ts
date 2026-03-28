@@ -210,13 +210,102 @@ export const reportsApi = {
   zonesLoad: () => withFallback<ZoneLoadReportRow[]>('/equipment/reports/zones-load', async () => (await api.get('/equipment/reports/zones-load')).data, () => mockZoneLoadReport, 'Zone load report fallback uses local fixtures.')
 };
 
+const toNumberOrNull = (value: unknown): number | null => {
+  const normalized = typeof value === 'string' && value.trim() === '' ? Number.NaN : Number(value);
+  return Number.isFinite(normalized) ? normalized : null;
+};
+
+const normalizeRackEquipment = (equipment: unknown): FloorPlanRack['equipment'] => {
+  if (!Array.isArray(equipment)) {
+    return [];
+  }
+
+  return equipment.reduce<FloorPlanRack['equipment']>((acc, item, index) => {
+      if (!item || typeof item !== 'object') {
+        return acc;
+      }
+
+      const source = item as Record<string, unknown>;
+      const id = toNumberOrNull(source.id ?? source.equipment_id);
+      if (id === null) {
+        return acc;
+      }
+
+      acc.push({
+        id,
+        name: String(source.name ?? source.device_name ?? source.title ?? source.label ?? `Оборудование ${index + 1}`),
+        // `unit` in UI is used as consumed U-size for 3D/read-only occupancy math.
+        unit: Math.max(1, toNumberOrNull(source.unit ?? source.size_u ?? source.units) ?? 1),
+        type: source.type ? String(source.type) : undefined,
+        status: source.status ? String(source.status) as FloorPlanRack['equipment'][number]['status'] : undefined
+      });
+
+      return acc;
+    }, []);
+};
+
+const normalizeFloorPlanRack = (rack: unknown): FloorPlanRack | null => {
+  if (!rack || typeof rack !== 'object') {
+    return null;
+  }
+
+  const source = rack as Record<string, unknown>;
+  const id = toNumberOrNull(source.id);
+  const floorplanId = toNumberOrNull(source.floorplan_id ?? source.floor_plan_id ?? source.plan_id);
+  const linkedRackId = toNumberOrNull(
+    source.switch_cabinet_id
+    ?? source.linked_rack_id
+    ?? source.rack_id
+    ?? source.source_rack_id
+    ?? source.physical_rack_id
+    ?? source.rackRef
+  );
+
+  // Guard: floor plan should not contain unlinked/invalid "virtual" racks.
+  if (id === null || floorplanId === null || linkedRackId === null) {
+    return null;
+  }
+
+  const rawEquipment = source.equipment ?? source.installed_equipment ?? source.devices ?? source.items;
+  const normalizedEquipment = normalizeRackEquipment(rawEquipment);
+
+  return {
+    id,
+    floorplan_id: floorplanId,
+    switch_cabinet_id: linkedRackId,
+    name: String(source.name ?? source.title ?? `Rack-${id}`),
+    x: toNumberOrNull(source.x) ?? 0,
+    y: toNumberOrNull(source.y) ?? 0,
+    z: toNumberOrNull(source.z) ?? 0,
+    rotation_y: toNumberOrNull(source.rotation_y ?? source.rotation ?? source.rotate_y) ?? 0,
+    width: toNumberOrNull(source.width) ?? 0.6,
+    depth: toNumberOrNull(source.depth) ?? 1,
+    height: toNumberOrNull(source.height) ?? 2.2,
+    unit_capacity: Math.max(1, toNumberOrNull(source.unit_capacity ?? source.units_capacity ?? source.capacity_u) ?? 42),
+    equipment: normalizedEquipment,
+    serial_number: source.serial_number ? String(source.serial_number) : null,
+    energy_consumption: toNumberOrNull(source.energy_consumption ?? source.current_energy_consumption),
+    energy_limit: toNumberOrNull(source.energy_limit),
+    weight: toNumberOrNull(source.weight ?? source.current_weight),
+    zone_name: source.zone_name ? String(source.zone_name) : null,
+    equipment_count: toNumberOrNull(source.equipment_count) ?? normalizedEquipment.length
+  };
+};
+
+const normalizeFloorPlan = (floorPlan: FloorPlan): FloorPlan => ({
+  ...floorPlan,
+  racks: (Array.isArray(floorPlan.racks) ? floorPlan.racks : [])
+    .map((rack) => normalizeFloorPlanRack(rack))
+    .filter((rack): rack is FloorPlanRack => Boolean(rack))
+});
+
 
 export const floorplansApi = {
   list: () => withFallback<FloorPlan[]>('/api/floorplan', async () => (await api.get('/api/floorplan')).data, () => [], 'Floor plan list fallback uses empty collection.'),
   create: async (payload: Partial<FloorPlan>) => (await api.post('/api/floorplan/create', payload)).data,
   update: async (id: number, payload: Partial<FloorPlan>) => (await api.put(`/api/floorplan/update/${id}`, payload)).data,
   remove: async (id: number) => (await api.delete(`/api/floorplan/delete/${id}`)).data,
-  detail3d: (id: number) => withFallback<FloorPlan>(`/api/floorplan/${id}`, async () => (await api.get(`/api/floorplan/${id}`)).data, () => ({
+  detail3d: (id: number) => withFallback<FloorPlan>(`/api/floorplan/${id}`, async () => normalizeFloorPlan((await api.get(`/api/floorplan/${id}`)).data), () => ({
     id,
     zone_id: 0,
     zone_name: 'N/A',
@@ -239,8 +328,8 @@ export const floorplansApi = {
     updated_at: new Date().toISOString(),
     racks: []
   }), '3D floor plan fallback uses a minimal empty scene.'),
-  createRack: async (payload: Partial<FloorPlanRack>) => (await api.post('/api/rack/create', payload)).data,
-  updateRack: async (id: number, payload: Partial<FloorPlanRack>) => (await api.put(`/api/rack/update/${id}`, payload)).data,
+  createRack: async (payload: Partial<FloorPlanRack>) => normalizeFloorPlanRack((await api.post('/api/rack/create', payload)).data),
+  updateRack: async (id: number, payload: Partial<FloorPlanRack>) => normalizeFloorPlanRack((await api.put(`/api/rack/update/${id}`, payload)).data),
   removeRack: async (id: number) => (await api.delete(`/api/rack/delete/${id}`)).data,
-  rack2d: async (id: number) => (await api.get<FloorPlanRack>(`/api/rack/${id}/2d`)).data
+  rack2d: async (id: number) => normalizeFloorPlanRack((await api.get<FloorPlanRack>(`/api/rack/${id}/2d`)).data)
 };

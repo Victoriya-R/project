@@ -297,6 +297,18 @@ export function FloorPlansPage() {
       return [];
     }
 
+    console.log('[floorplan:page-selected-rack-before-slots]', {
+      selectedRackId: selectedRack.id,
+      equipment_count: selectedRack.equipment_count ?? null,
+      equipmentLength: selectedRack.equipment.length,
+      equipment: selectedRack.equipment.map((item) => ({
+        id: item.id,
+        name: item.name,
+        unit: item.unit,
+        startUnit: item.startUnit ?? null
+      }))
+    });
+
     const totalUnits = Math.max(1, selectedRack.unit_capacity);
     const occupiedByUnit = new Map<number, FloorPlanRack['equipment'][number]>();
     let fallbackCursor = totalUnits;
@@ -326,6 +338,25 @@ export function FloorPlansPage() {
       return { unit, equipment: occupiedByUnit.get(unit) ?? null };
     });
   }, [selectedRack]);
+
+  useEffect(() => {
+    if (!selectedRack) {
+      return;
+    }
+
+    console.debug('[floorplan:selected-rack-runtime]', {
+      selectedRackId: selectedRack.id,
+      selectedRackName: selectedRack.name,
+      selectedRackEquipmentLength: selectedRack.equipment.length,
+      selectedRackEquipment: selectedRack.equipment.map((item) => ({
+        id: item.id,
+        name: item.name,
+        unit: item.unit,
+        startUnit: item.startUnit ?? null
+      })),
+      rackSlotsOccupiedUnits: rackSlots.filter((slot) => Boolean(slot.equipment)).map((slot) => slot.unit)
+    });
+  }, [selectedRack, rackSlots]);
 
   if (plansQuery.isLoading || zonesQuery.isLoading || cabinetsQuery.isLoading) {
     return <LoadingState label="Загружаем планы помещений..." />;

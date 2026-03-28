@@ -215,6 +215,19 @@ const toNumberOrNull = (value: unknown): number | null => {
   return Number.isFinite(normalized) ? normalized : null;
 };
 
+const createStableSyntheticEquipmentId = (parts: unknown[]): number => {
+  const signature = parts
+    .map((part) => String(part ?? ''))
+    .join('|');
+
+  let hash = 0;
+  for (let index = 0; index < signature.length; index += 1) {
+    hash = (hash * 31 + signature.charCodeAt(index)) | 0;
+  }
+
+  return -Math.max(1, Math.abs(hash));
+};
+
 const resolveApiAssetUrl = (value: string | null | undefined): string | null => {
   if (!value) {
     return null;
@@ -234,22 +247,31 @@ const normalizeRackEquipment = (equipment: unknown): FloorPlanRack['equipment'] 
     return [];
   }
 
-  return equipment.reduce<FloorPlanRack['equipment']>((acc, item) => {
+  return equipment.reduce<FloorPlanRack['equipment']>((acc, item, index) => {
       if (!item || typeof item !== 'object') {
         return acc;
       }
 
       const source = item as Record<string, unknown>;
-      const id = toNumberOrNull(source.id ?? source.equipment_id);
-      if (id === null) {
-        return acc;
-      }
+      const startUnit = toNumberOrNull(source.startUnit ?? source.start_unit ?? source.position_u ?? source.u_position) ?? null;
+      const name = String(source.name ?? source.device_name ?? source.title ?? 'Оборудование');
+      const id = toNumberOrNull(source.id ?? source.equipment_id)
+        ?? createStableSyntheticEquipmentId([
+          source.id,
+          source.equipment_id,
+          source.device_id,
+          source.uuid,
+          source.serial_number,
+          name,
+          startUnit,
+          index
+        ]);
 
       acc.push({
         id,
-        name: String(source.name ?? source.device_name ?? source.title ?? 'Оборудование'),
+        name,
         unit: Math.max(1, toNumberOrNull(source.unit ?? source.size_u ?? source.units) ?? 1),
-        startUnit: toNumberOrNull(source.startUnit ?? source.start_unit ?? source.position_u ?? source.u_position) ?? null,
+        startUnit,
         type: source.type ? String(source.type) : undefined,
         status: source.status ? String(source.status) as FloorPlanRack['equipment'][number]['status'] : undefined
       });
@@ -265,6 +287,134 @@ const getEquipmentCollectionFromSource = (sourceRack: Record<string, unknown>): 
   ?? sourceRack.items
 );
 
+const getSlotsCollectionFromSource = (sourceRack: Record<string, unknown>): unknown => (
+  sourceRack.slots
+  ?? sourceRack.rack_slots
+  ?? sourceRack.rackSlots
+  ?? sourceRack.u_slots
+  ?? sourceRack.cabinet_slots
+  ?? sourceRack.units
+);
+
+const hasMeaningfulEquipmentName = (value: unknown): boolean => {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return !['-', 'empty', 'free', 'available', 'n/a', 'none', 'свободно', 'пусто'].includes(normalized);
+};
+
+const isTruthySlotOccupiedFlag = (value: unknown): boolean => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value > 0;
+  }
+
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return ['1', 'true', 'occupied', 'used', 'busy', 'installed', 'filled'].includes(normalized);
+};
+
+const resolveSlotUnit = (slotSource: Record<string, unknown>): number | null => {
+  const candidates = [
+    slotSource.unit,
+    slotSource.unit_number,
+    slotSource.unitNumber,
+    slotSource.u,
+    slotSource.u_index,
+    slotSource.u_number,
+    slotSource.position_u,
+    slotSource.u_position,
+    slotSource.start_unit,
+    slotSource.slot,
+    slotSource.slot_number,
+    slotSource.slot_index
+  ];
+
+  for (const rawValue of candidates) {
+    const parsed = toNumberOrNull(rawValue);
+    if (parsed === null) {
+      continue;
+    }
+
+    if (parsed === 0) {
+      return 1;
+    }
+
+    return parsed;
+  }
+
+  return null;
+};
+
+const calculateOccupiedUnits = (equipment: FloorPlanRack['equipment']): number => {
+  const occupiedUnits = new Set<number>();
+
+  equipment.forEach((item) => {
+    const normalizedUnits = Math.max(1, toNumberOrNull(item.unit) ?? 1);
+    const startUnit = toNumberOrNull(item.startUnit);
+
+    if (startUnit === null) {
+      return;
+    }
+
+    for (let unitOffset = 0; unitOffset < normalizedUnits; unitOffset += 1) {
+      occupiedUnits.add(startUnit + unitOffset);
+    }
+  });
+
+  return occupiedUnits.size;
+};
+
+const isLikelyAggregatedSummary = (
+  equipmentFromCollection: FloorPlanRack['equipment'],
+  equipmentFromSlots: FloorPlanRack['equipment']
+): boolean => {
+  if (equipmentFromCollection.length !== 1 || equipmentFromSlots.length <= 1) {
+    return false;
+  }
+
+  const [collectionItem] = equipmentFromCollection;
+  const slotStartUnits = new Set(
+    equipmentFromSlots
+      .map((item) => toNumberOrNull(item.startUnit))
+      .filter((item): item is number => item !== null)
+  );
+
+  return (
+    slotStartUnits.size > 1
+    && (
+      toNumberOrNull(collectionItem.startUnit) === null
+      || calculateOccupiedUnits(equipmentFromCollection) < calculateOccupiedUnits(equipmentFromSlots)
+    )
+  );
+};
+
+const pickRackEquipmentSource = (sourceRack: Record<string, unknown>): {
+  equipment: FloorPlanRack['equipment'];
+  equipmentFromCollection: FloorPlanRack['equipment'];
+  equipmentFromSlots: FloorPlanRack['equipment'];
+} => {
+  const equipmentFromCollection = normalizeRackEquipment(getEquipmentCollectionFromSource(sourceRack));
+  const equipmentFromSlots = normalizeEquipmentFromSlots(getSlotsCollectionFromSource(sourceRack));
+  const collectionOccupiedUnits = calculateOccupiedUnits(equipmentFromCollection);
+  const slotsOccupiedUnits = calculateOccupiedUnits(equipmentFromSlots);
+  const shouldPreferSlots = (
+    equipmentFromSlots.length > equipmentFromCollection.length
+    || slotsOccupiedUnits > collectionOccupiedUnits
+    || isLikelyAggregatedSummary(equipmentFromCollection, equipmentFromSlots)
+  );
+
+  return {
+    equipment: shouldPreferSlots ? equipmentFromSlots : equipmentFromCollection,
+    equipmentFromCollection,
+    equipmentFromSlots
+  };
+};
+
 const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment'] => {
   if (!Array.isArray(slots)) {
     return [];
@@ -279,7 +429,7 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
     occupiedUnits: Set<number>;
   };
 
-  const aggregatedByEquipmentId = new Map<number, SlotAggregate>();
+  const aggregatedByEquipmentKey = new Map<string, SlotAggregate>();
 
   slots.forEach((rawSlot) => {
     if (!rawSlot || typeof rawSlot !== 'object') {
@@ -287,19 +437,30 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
     }
 
     const slotSource = rawSlot as Record<string, unknown>;
-    const slotUnit = toNumberOrNull(
-      slotSource.unit
-      ?? slotSource.unit_number
-      ?? slotSource.u
-      ?? slotSource.position_u
-      ?? slotSource.u_position
-      ?? slotSource.start_unit
-    );
+    const slotUnit = resolveSlotUnit(slotSource);
 
     const nestedEquipmentSource = slotSource.equipment
       ?? slotSource.installed_equipment
       ?? slotSource.device
-      ?? slotSource.item;
+      ?? slotSource.item
+      ?? slotSource.equipment_data;
+
+    const fallbackSlotHasEquipmentIdentity = (
+      toNumberOrNull(slotSource.equipment_id ?? slotSource.device_id ?? slotSource.installed_equipment_id ?? slotSource.item_id) !== null
+      || hasMeaningfulEquipmentName(slotSource.equipment_name ?? slotSource.device_name ?? slotSource.name ?? slotSource.title)
+    );
+
+    const slotIsMarkedOccupied = isTruthySlotOccupiedFlag(
+      slotSource.occupied
+      ?? slotSource.is_occupied
+      ?? slotSource.busy
+      ?? slotSource.in_use
+      ?? slotSource.status
+    );
+
+    if (!nestedEquipmentSource && !fallbackSlotHasEquipmentIdentity && !slotIsMarkedOccupied) {
+      return;
+    }
 
     const normalizedFromNested = normalizeRackEquipment(
       nestedEquipmentSource ? [nestedEquipmentSource] : [slotSource]
@@ -309,9 +470,14 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
       return;
     }
 
-    const existing = aggregatedByEquipmentId.get(normalizedFromNested.id);
-    const explicitStartUnit = toNumberOrNull(slotSource.start_unit) ?? normalizedFromNested.startUnit ?? null;
+    const explicitStartUnit = resolveSlotUnit(slotSource) ?? normalizedFromNested.startUnit ?? null;
     const explicitUnits = toNumberOrNull(slotSource.size_u ?? slotSource.units ?? slotSource.unit_size) ?? normalizedFromNested.unit ?? null;
+    const dedupeKey = [
+      normalizedFromNested.id,
+      normalizedFromNested.name.trim().toLowerCase(),
+      explicitStartUnit ?? `slot:${slotUnit ?? 'unknown'}`
+    ].join('|');
+    const existing = aggregatedByEquipmentKey.get(dedupeKey);
 
     if (!existing) {
       const occupiedUnits = new Set<number>();
@@ -319,7 +485,7 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
         occupiedUnits.add(slotUnit);
       }
 
-      aggregatedByEquipmentId.set(normalizedFromNested.id, {
+      aggregatedByEquipmentKey.set(dedupeKey, {
         base: normalizedFromNested,
         minUnit: slotUnit,
         maxUnit: slotUnit,
@@ -349,7 +515,7 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
     }
   });
 
-  return Array.from(aggregatedByEquipmentId.values()).map((aggregate) => {
+  return Array.from(aggregatedByEquipmentKey.values()).map((aggregate) => {
     const occupiedUnits = aggregate.occupiedUnits.size;
     const inferredUnitsByRange = (aggregate.minUnit !== null && aggregate.maxUnit !== null)
       ? Math.max(1, aggregate.maxUnit - aggregate.minUnit + 1)
@@ -375,12 +541,12 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
 };
 
 const normalizeRackEquipmentFromAnySource = (sourceRack: Record<string, unknown>): FloorPlanRack['equipment'] => {
-  const directEquipment = normalizeRackEquipment(getEquipmentCollectionFromSource(sourceRack));
-  if (directEquipment.length) {
-    return directEquipment;
+  const { equipment, equipmentFromCollection, equipmentFromSlots } = pickRackEquipmentSource(sourceRack);
+  if (equipment.length) {
+    return equipment;
   }
 
-  return normalizeEquipmentFromSlots(sourceRack.slots ?? sourceRack.rack_slots ?? sourceRack.units);
+  return equipmentFromSlots.length ? equipmentFromSlots : equipmentFromCollection;
 };
 
 const resolveRackEquipmentCount = (source: Record<string, unknown>, equipment: FloorPlanRack['equipment']): number => {
@@ -487,9 +653,48 @@ const enrichFloorPlanWithLinkedCabinets = async (floorPlan: FloorPlan): Promise<
 
   const enrichedRacks = racks.map((rack) => {
     const sourceRack = rack.switch_cabinet_id ? cabinetsMap.get(rack.switch_cabinet_id) ?? null : null;
-    const normalizedEquipment = normalizeEquipmentFromSourceRack(sourceRack);
+    const normalizedEquipmentSelection = sourceRack ? pickRackEquipmentSource(sourceRack) : null;
+    const normalizedEquipment = normalizedEquipmentSelection?.equipment ?? normalizeEquipmentFromSourceRack(sourceRack);
     const sourceCapacity = sourceRack ? toNumberOrNull(sourceRack.unit_capacity ?? sourceRack.units_capacity ?? sourceRack.capacity_u) : null;
     const equipment = normalizedEquipment.length ? normalizedEquipment : rack.equipment;
+
+    if (sourceRack) {
+      const rawSlots = getSlotsCollectionFromSource(sourceRack);
+      const rawSlotSamples = Array.isArray(rawSlots)
+        ? rawSlots
+          .slice(0, 5)
+          .map((slot) => (slot && typeof slot === 'object' ? Object.keys(slot as Record<string, unknown>) : []))
+        : [];
+
+      // Temporary debug output for verifying equipment source selection in linked cabinets.
+      console.debug('[floorplan:equipment-normalization]', {
+        linkedRackId: rack.switch_cabinet_id ?? null,
+        rawSourceKeys: Object.keys(sourceRack),
+        rawSlotsLength: Array.isArray(rawSlots) ? rawSlots.length : 0,
+        rawSlotSamples,
+        equipmentFromCollectionLength: normalizedEquipmentSelection?.equipmentFromCollection.length ?? 0,
+        equipmentFromCollection: (normalizedEquipmentSelection?.equipmentFromCollection ?? []).map((item) => ({
+          id: item.id,
+          name: item.name,
+          unit: item.unit,
+          startUnit: item.startUnit ?? null
+        })),
+        equipmentFromSlotsLength: normalizedEquipmentSelection?.equipmentFromSlots.length ?? 0,
+        equipmentFromSlots: (normalizedEquipmentSelection?.equipmentFromSlots ?? []).map((item) => ({
+          id: item.id,
+          name: item.name,
+          unit: item.unit,
+          startUnit: item.startUnit ?? null
+        })),
+        finalEquipmentLength: equipment.length,
+        finalEquipment: equipment.map((item) => ({
+          id: item.id,
+          name: item.name,
+          unit: item.unit,
+          startUnit: item.startUnit ?? null
+        }))
+      });
+    }
 
     return {
       ...rack,
@@ -497,6 +702,20 @@ const enrichFloorPlanWithLinkedCabinets = async (floorPlan: FloorPlan): Promise<
       equipment,
       equipment_count: sourceRack ? resolveRackEquipmentCount(sourceRack, equipment) : equipment.length
     };
+  });
+
+  enrichedRacks.forEach((rack) => {
+    console.log('[floorplan:final-rack]', {
+      linkedRackId: rack.switch_cabinet_id ?? null,
+      equipment_count: rack.equipment_count ?? null,
+      equipmentLength: rack.equipment.length,
+      equipment: rack.equipment.map((item) => ({
+        id: item.id,
+        name: item.name,
+        unit: item.unit,
+        startUnit: item.startUnit ?? null
+      }))
+    });
   });
 
   return {

@@ -433,3 +433,51 @@
 2026-03-28T10:49:52.893Z info: Success: Fetched 2 zones
 2026-03-28T10:49:52.895Z info: Success: Fetched 3 switch cabinets
 2026-03-28T10:50:07.230Z info: Success: Fetched 5 equipment
+2026-03-28T11:06:22.825Z info: Success: Fetched 2 zones
+2026-03-28T11:06:22.828Z info: Success: Fetched 3 switch cabinets
+2026-03-28T11:07:19.170Z info: Success: User admin_1 logged in
+2026-03-28T11:07:19.223Z info: Success: Fetched 5 equipment
+2026-03-28T11:07:19.224Z info: Success: Fetched 1 connections
+2026-03-28T11:07:19.225Z info: Success: Fetched 2 zones
+2026-03-28T11:07:19.225Z info: Success: Fetched 3 switch cabinets
+2026-03-28T11:07:20.834Z info: Success: Fetched 3 switch cabinets
+2026-03-28T11:07:20.835Z info: Success: Fetched 2 zones
+2026-03-28T11:07:23.634Z info: Success: Fetched 5 equipment
+2026-03-28T11:20:15.262Z info: Success: Fetched 2 zones
+2026-03-28T11:20:15.264Z info: Success: Fetched 3 switch cabinets
+2026-03-28T11:20:16.977Z info: Success: Fetched 2 zones
+2026-03-28T11:20:16.978Z info: Success: Fetched 3 switch cabinets
+2026-03-28T11:20:34.789Z info: Success: Fetched 2 zones
+2026-03-28T11:20:34.791Z info: Success: Fetched 3 switch cabinets
+2026-03-28T11:21:53.998Z info: Success: Floor plan created with ID: 5
+2026-03-28T11:53:07.390Z info: Success: User admin_1 logged in
+2026-03-28T11:53:07.455Z info: Success: Fetched 5 equipment
+2026-03-28T11:53:07.456Z info: Success: Fetched 2 zones
+2026-03-28T11:53:07.457Z info: Success: Fetched 3 switch cabinets
+2026-03-28T11:53:07.459Z info: Success: Fetched 1 connections
+2026-03-28T11:53:12.368Z info: Success: Fetched 2 zones
+2026-03-28T11:53:12.371Z info: Success: Fetched 3 switch cabinets
+2026-03-28T11:53:38.381Z info: Success: Fetched 5 equipment
+2026-03-28T11:53:46.547Z info: Success: Fetched 2 zones
+2026-03-28T11:53:46.549Z info: Success: Fetched 3 switch cabinets
+2026-03-28T11:55:36.895Z info: Success: Fetched 2 zones
+2026-03-28T11:55:36.896Z info: Success: Fetched 3 switch cabinets
+2026-03-28T11:55:40.607Z info: Success: Fetched 5 equipment
+2026-03-28T11:55:56.625Z info: Equipment ID: 11 placed in Switch Cabinet ID: 42
+2026-03-28T11:55:56.635Z info: Success: Fetched 5 equipment
+2026-03-28T11:56:03.769Z info: Equipment ID: 11 removed from Switch Cabinet
+2026-03-28T11:56:03.778Z info: Success: Fetched 5 equipment
+2026-03-28T11:56:37.566Z info: Success: Fetched 2 zones
+2026-03-28T11:56:37.567Z info: Success: Fetched 3 switch cabinets
+2026-03-28T12:12:31.629Z info: Success: User admin_1 logged in
+2026-03-28T12:12:31.688Z info: Success: Fetched 5 equipment
+2026-03-28T12:12:31.689Z info: Success: Fetched 3 switch cabinets
+2026-03-28T12:12:31.692Z info: Success: Fetched 2 zones
+2026-03-28T12:12:31.694Z info: Success: Fetched 1 connections
+2026-03-28T12:12:33.829Z info: Success: Fetched 2 zones
+2026-03-28T12:12:33.829Z info: Success: Fetched 3 switch cabinets
+2026-03-28T12:13:47.242Z info: Success: Fetched 2 zones
+2026-03-28T12:13:47.243Z info: Success: Fetched 3 switch cabinets
+2026-03-28T12:13:55.088Z info: Success: Floor plan created with ID: 6
+2026-03-28T12:36:34.090Z info: Success: Fetched 2 zones
+2026-03-28T12:36:34.093Z info: Success: Fetched 3 switch cabinets

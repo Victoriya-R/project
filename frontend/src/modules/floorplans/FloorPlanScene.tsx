@@ -326,27 +326,35 @@ export function FloorPlanScene({
                     let cursor = 0;
 
                     rack.equipment.forEach((equipment, idx) => {
-                      const equipmentUnits = Math.max(equipment.unit || 1, 1);
-                      if (cursor >= unitCapacity) {
-                        return;
+                      const equipmentUnits = Math.max(equipment.unit || 1, 1)
+
+                      const explicitStart =
+                        typeof equipment.startUnit === 'number'
+                          ? equipment.startUnit - 1
+                          : null
+
+                      const start = explicitStart !== null
+                        ? clamp(explicitStart, 0, Math.max(unitCapacity - equipmentUnits, 0))
+                        : cursor
+
+                      if (start >= unitCapacity) {
+                        return
                       }
-                      const hasExplicitStart = Number.isFinite(Number(equipment.startUnit));
-                      const startFromBottom = hasExplicitStart
-                        ? Math.max(0, Math.min(unitCapacity - 1, unitCapacity - Number(equipment.startUnit)))
-                        : cursor;
-                      const clippedUnits = Math.min(equipmentUnits, unitCapacity - startFromBottom);
+
+                      const clippedUnits = Math.min(equipmentUnits, unitCapacity - start)
+
                       equipmentSegments.push({
                         key: `${equipment.id}-${idx}`,
-                        start: startFromBottom,
+                        start,
                         units: clippedUnits,
                         label: equipment.name,
                         real: true
-                      });
-                      if (!hasExplicitStart) {
-                        cursor += clippedUnits;
-                      }
-                    });
+                      })
 
+                      if (explicitStart === null) {
+                        cursor = start + clippedUnits
+                      }
+                    })
 
                     return (
                       <button
@@ -434,26 +442,38 @@ export function FloorPlanScene({
                                   height: innerHeight
                                 }}
                               />
-                              {equipmentSegments.map((segment) => (
-                                <div
-                                  key={segment.key}
-                                  className={`absolute left-1.5 right-1.5 overflow-hidden rounded-sm border ${segment.real
-                                      ? 'border-emerald-400/40 bg-emerald-500/30'
-                                      : 'border-slate-500/35 bg-slate-700/20'
-                                    }`}
-                                  style={{
-                                    bottom: segment.start * unitHeight,
-                                    height: segment.units * unitHeight
-                                  }}
-                                  title={segment.label}
-                                >
-                                  {segment.real ? (
-                                    <div className="flex h-full items-center justify-center px-1 text-center text-[8px] font-medium text-white/90">
-                                      {segment.label}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              ))}
+                              {equipmentSegments.map((segment) => {
+                                const actualHeight = segment.units * unitHeight
+                                const visualHeight = segment.real ? Math.max(actualHeight, 10) : actualHeight
+                                const rawBottom = segment.start * unitHeight
+                                const visualBottom = clamp(rawBottom - (visualHeight - actualHeight) / 2, 0, innerHeight - visualHeight)
+
+                                return (
+                                  <div
+                                    key={segment.key}
+                                    className={`absolute left-1.5 right-1.5 overflow-hidden rounded-sm border ${segment.real
+                                        ? 'border-emerald-300/80 bg-emerald-400/60'
+                                        : 'border-slate-500/35 bg-slate-700/20'
+                                      }`}
+                                    style={{
+                                      bottom: visualBottom,
+                                      height: visualHeight,
+                                      boxShadow: segment.real ? '0 0 10px rgba(74, 222, 128, 0.35)' : undefined
+                                    }}
+                                    title={segment.label}
+                                  >
+                                    {segment.real ? (
+                                      visualHeight >= 16 ? (
+                                        <div className="flex h-full items-center justify-center px-1 text-center text-[8px] font-semibold text-slate-950">
+                                          {segment.label}
+                                        </div>
+                                      ) : (
+                                        <div className="absolute inset-x-0 top-1/2 h-[2px] -translate-y-1/2 bg-white/80" />
+                                      )
+                                    ) : null}
+                                  </div>
+                                )
+                              })}
                             </div>
                           </div>
 

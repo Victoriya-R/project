@@ -23,7 +23,6 @@ type PlanFormState = {
   depth: string;
   panel_size_x: string;
   panel_size_y: string;
-  background_image_url: string;
 };
 
 const defaultPlanForm: PlanFormState = {
@@ -32,8 +31,7 @@ const defaultPlanForm: PlanFormState = {
   width: '12',
   depth: '8',
   panel_size_x: '0.6',
-  panel_size_y: '0.6',
-  background_image_url: ''
+  panel_size_y: '0.6'
 };
 
 export function FloorPlansPage() {
@@ -47,6 +45,8 @@ export function FloorPlansPage() {
   const [planFormOpen, setPlanFormOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<FloorPlan | null>(null);
   const [planForm, setPlanForm] = useState<PlanFormState>(defaultPlanForm);
+  const [backgroundImageFile, setBackgroundImageFile] = useState<File | null>(null);
+  const [backgroundPreviewUrl, setBackgroundPreviewUrl] = useState<string | null>(null);
   const [newRackCabinetId, setNewRackCabinetId] = useState('');
   const [planDraft, setPlanDraft] = useState<FloorPlan | null>(null);
   const saveTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
@@ -99,6 +99,14 @@ export function FloorPlansPage() {
     setSelectedRackUnit(null);
   }, [selectedRackId]);
 
+  useEffect(() => {
+    return () => {
+      if (backgroundPreviewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(backgroundPreviewUrl);
+      }
+    };
+  }, [backgroundPreviewUrl]);
+
 
   const invalidate = async () => {
     await Promise.all([
@@ -112,6 +120,8 @@ export function FloorPlansPage() {
     onSuccess: async () => {
 
       setPlanForm(defaultPlanForm);
+      setBackgroundImageFile(null);
+      setBackgroundPreviewUrl(null);
       setPlanFormOpen(false);
       setErrorMessage(null);
       await invalidate();
@@ -124,6 +134,8 @@ export function FloorPlansPage() {
     onSuccess: async () => {
       setPlanForm(defaultPlanForm);
       setEditingPlan(null);
+      setBackgroundImageFile(null);
+      setBackgroundPreviewUrl(null);
       setPlanFormOpen(false);
       setErrorMessage(null);
       await invalidate();
@@ -178,6 +190,8 @@ export function FloorPlansPage() {
   const openCreatePlan = () => {
     setEditingPlan(null);
     setPlanForm(defaultPlanForm);
+    setBackgroundImageFile(null);
+    setBackgroundPreviewUrl(null);
     setPlanFormOpen(true);
   };
 
@@ -189,32 +203,43 @@ export function FloorPlansPage() {
       width: String(plan.width),
       depth: String(plan.depth),
       panel_size_x: String(plan.panel_size_x),
-      panel_size_y: String(plan.panel_size_y),
-      background_image_url: plan.background_image_url ?? ''
+      panel_size_y: String(plan.panel_size_y)
     });
+    setBackgroundImageFile(null);
+    setBackgroundPreviewUrl(plan.background_image_url ?? null);
     setPlanFormOpen(true);
   };
 
-  const upsertPlan = () => {
-    const payload: Partial<FloorPlan> = {
-      zone_id: Number(planForm.zone_id),
-      name: planForm.name,
-      width: Number(planForm.width),
-      depth: Number(planForm.depth),
-      panel_size_x: Number(planForm.panel_size_x),
-      panel_size_y: Number(planForm.panel_size_y),
-      background_image_url: planForm.background_image_url || null,
-      grid_enabled: true,
-      axis_x_label: 'X',
-      axis_y_label: 'Y'
-    };
+  const upsertPlan = async () => {
+    try {
+      let backgroundImageUrl = editingPlan?.background_image_url ?? null;
+      if (backgroundImageFile) {
+        const upload = await floorplansApi.uploadBackgroundImage(backgroundImageFile);
+        backgroundImageUrl = upload.url;
+      }
 
-    if (editingPlan) {
-      updatePlan.mutate({ id: editingPlan.id, payload });
-      return;
+      const payload: Partial<FloorPlan> = {
+        zone_id: Number(planForm.zone_id),
+        name: planForm.name,
+        width: Number(planForm.width),
+        depth: Number(planForm.depth),
+        panel_size_x: Number(planForm.panel_size_x),
+        panel_size_y: Number(planForm.panel_size_y),
+        background_image_url: backgroundImageUrl,
+        grid_enabled: true,
+        axis_x_label: 'X',
+        axis_y_label: 'Y'
+      };
+
+      if (editingPlan) {
+        await updatePlan.mutateAsync({ id: editingPlan.id, payload });
+        return;
+      }
+
+      await createPlan.mutateAsync(payload);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, 'Ошибка сохранения плана.'));
     }
-
-    createPlan.mutate(payload);
   };
 
   const commitRackPosition = ({ rackId, x, z }: { rackId: number; x: number; z: number }) => {
@@ -317,7 +342,7 @@ export function FloorPlansPage() {
         title="План помещения"
         description="Основной режим редактирования — 2D. 3D режим используется для визуального контроля размещения стоек."
         breadcrumbs={<Breadcrumbs items={[{ label: 'Dashboard', href: '/' }, { label: 'Floor Plan' }]} />}
-        actions={<Button icon={<Plus className="h-4 w-4" />} onClick={openCreatePlan}>Создать план</Button>}
+        actions={plans.length ? <Button icon={<Plus className="h-4 w-4" />} onClick={openCreatePlan}>Создать план</Button> : undefined}
       />
 
       <DataTable
@@ -463,8 +488,25 @@ export function FloorPlansPage() {
               <TextInput type="number" step="0.1" value={planForm.panel_size_y} onChange={(event) => setPlanForm((current) => ({ ...current, panel_size_y: event.target.value }))} />
             </FormField>
           </div>
-          <FormField label="Background image URL">
-            <TextInput value={planForm.background_image_url} onChange={(event) => setPlanForm((current) => ({ ...current, background_image_url: event.target.value }))} />
+          <FormField label="Background image">
+            <input
+              type="file"
+              accept="image/*"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                setBackgroundImageFile(file);
+                if (file) {
+                  const localPreview = URL.createObjectURL(file);
+                  setBackgroundPreviewUrl(localPreview);
+                } else {
+                  setBackgroundPreviewUrl(editingPlan?.background_image_url ?? null);
+                }
+              }}
+            />
+            {backgroundPreviewUrl ? (
+              <img src={backgroundPreviewUrl} alt="Превью фона плана" className="mt-2 max-h-40 w-full rounded-lg border border-slate-200 object-cover" />
+            ) : null}
           </FormField>
           <Button onClick={upsertPlan}>{editingPlan ? 'Сохранить изменения' : 'Создать план'}</Button>
         </div>

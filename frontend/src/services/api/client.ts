@@ -215,12 +215,26 @@ const toNumberOrNull = (value: unknown): number | null => {
   return Number.isFinite(normalized) ? normalized : null;
 };
 
+const resolveApiAssetUrl = (value: string | null | undefined): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  const baseUrl = (api.defaults.baseURL ?? '').replace(/\/+$/, '');
+  const normalizedPath = value.startsWith('/') ? value : `/${value}`;
+  return baseUrl ? `${baseUrl}${normalizedPath}` : normalizedPath;
+};
+
 const normalizeRackEquipment = (equipment: unknown): FloorPlanRack['equipment'] => {
   if (!Array.isArray(equipment)) {
     return [];
   }
 
-  return equipment.reduce<FloorPlanRack['equipment']>((acc, item, index) => {
+  return equipment.reduce<FloorPlanRack['equipment']>((acc, item) => {
       if (!item || typeof item !== 'object') {
         return acc;
       }
@@ -233,10 +247,9 @@ const normalizeRackEquipment = (equipment: unknown): FloorPlanRack['equipment'] 
 
       acc.push({
         id,
-        name: String(source.name ?? source.device_name ?? source.title ?? source.label ?? `Оборудование ${index + 1}`),
-        // `unit` in UI is used as consumed U-size for 3D/read-only occupancy math.
+        name: String(source.name ?? source.device_name ?? source.title ?? 'Оборудование'),
         unit: Math.max(1, toNumberOrNull(source.unit ?? source.size_u ?? source.units) ?? 1),
-        startUnit: toNumberOrNull(source.startUnit ?? source.start_unit ?? source.position_u ?? source.u_position),
+        startUnit: toNumberOrNull(source.startUnit ?? source.start_unit ?? source.position_u ?? source.u_position) ?? null,
         type: source.type ? String(source.type) : undefined,
         status: source.status ? String(source.status) as FloorPlanRack['equipment'][number]['status'] : undefined
       });
@@ -250,33 +263,8 @@ const normalizeEquipmentFromSourceRack = (sourceRack: Record<string, unknown> | 
     return [];
   }
 
-  const sourceEquipment = sourceRack.equipment ?? sourceRack.installed_equipment ?? sourceRack.devices ?? [];
-  if (!Array.isArray(sourceEquipment)) {
-    return [];
-  }
-
-  return sourceEquipment.reduce<FloorPlanRack['equipment']>((acc, item) => {
-    if (!item || typeof item !== 'object') {
-      return acc;
-    }
-
-    const sourceItem = item as Record<string, unknown>;
-    const normalizedId = toNumberOrNull(sourceItem.id ?? sourceItem.equipment_id);
-    if (normalizedId === null) {
-      return acc;
-    }
-
-    acc.push({
-      id: normalizedId,
-      name: String(sourceItem.name ?? sourceItem.device_name ?? sourceItem.title ?? 'Оборудование'),
-      unit: Math.max(1, toNumberOrNull(sourceItem.unit ?? sourceItem.size_u ?? sourceItem.units) ?? 1),
-      startUnit: toNumberOrNull(sourceItem.startUnit ?? sourceItem.start_unit ?? sourceItem.position_u ?? sourceItem.u_position),
-      type: sourceItem.type ? String(sourceItem.type) : undefined,
-      status: sourceItem.status ? String(sourceItem.status) as FloorPlanRack['equipment'][number]['status'] : undefined
-    });
-
-    return acc;
-  }, []);
+  const sourceEquipment = sourceRack.equipment ?? sourceRack.installed_equipment ?? sourceRack.devices ?? sourceRack.items ?? [];
+  return normalizeRackEquipment(sourceEquipment);
 };
 
 const normalizeFloorPlanRack = (rack: unknown): FloorPlanRack | null => {
@@ -323,12 +311,13 @@ const normalizeFloorPlanRack = (rack: unknown): FloorPlanRack | null => {
     energy_limit: toNumberOrNull(source.energy_limit),
     weight: toNumberOrNull(source.weight ?? source.current_weight),
     zone_name: source.zone_name ? String(source.zone_name) : null,
-    equipment_count: toNumberOrNull(source.equipment_count) ?? normalizedEquipment.length
+    equipment_count: normalizedEquipment.length || toNumberOrNull(source.equipment_count) || 0
   };
 };
 
 const normalizeFloorPlan = (floorPlan: FloorPlan): FloorPlan => ({
   ...floorPlan,
+  background_image_url: resolveApiAssetUrl(floorPlan.background_image_url),
   racks: (Array.isArray(floorPlan.racks) ? floorPlan.racks : [])
     .map((rack) => normalizeFloorPlanRack(rack))
     .filter((rack): rack is FloorPlanRack => Boolean(rack))
@@ -372,11 +361,13 @@ const enrichFloorPlanWithLinkedCabinets = async (floorPlan: FloorPlan): Promise<
     const sourceRack = rack.switch_cabinet_id ? cabinetsMap.get(rack.switch_cabinet_id) ?? null : null;
     const normalizedEquipment = normalizeEquipmentFromSourceRack(sourceRack);
     const sourceCapacity = sourceRack ? toNumberOrNull(sourceRack.unit_capacity ?? sourceRack.units_capacity ?? sourceRack.capacity_u) : null;
+    const equipment = normalizedEquipment.length ? normalizedEquipment : rack.equipment;
 
     return {
       ...rack,
       unit_capacity: Math.max(1, sourceCapacity ?? rack.unit_capacity ?? 42),
-      equipment: normalizedEquipment.length ? normalizedEquipment : rack.equipment
+      equipment,
+      equipment_count: equipment.length
     };
   });
 
@@ -418,5 +409,19 @@ export const floorplansApi = {
   createRack: async (payload: Partial<FloorPlanRack>) => normalizeFloorPlanRack((await api.post('/api/rack/create', payload)).data),
   updateRack: async (id: number, payload: Partial<FloorPlanRack>) => normalizeFloorPlanRack((await api.put(`/api/rack/update/${id}`, payload)).data),
   removeRack: async (id: number) => (await api.delete(`/api/rack/delete/${id}`)).data,
-  rack2d: async (id: number) => normalizeFloorPlanRack((await api.get<FloorPlanRack>(`/api/rack/${id}/2d`)).data)
+  rack2d: async (id: number) => normalizeFloorPlanRack((await api.get<FloorPlanRack>(`/api/rack/${id}/2d`)).data),
+  uploadBackgroundImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await api.post<{ url: string }>('/api/floorplan/upload-background', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return {
+      ...response.data,
+      url: resolveApiAssetUrl(response.data.url) ?? response.data.url
+    };
+  }
 };

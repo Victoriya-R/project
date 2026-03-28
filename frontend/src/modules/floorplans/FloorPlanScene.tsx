@@ -267,14 +267,18 @@ export function FloorPlanScene({
                     const rackHeightPx = Math.max(rack.height * meterToPixel, 110);
                     const unitCapacity = Math.max(rack.unit_capacity, 1);
                     const visibleSlots = Math.min(unitCapacity, rackSlotPreviewLimit);
-                    const unitsPerSlot = Math.max(1, Math.ceil(unitCapacity / visibleSlots));
                     const occupiedUnits = rack.equipment.reduce((sum, equipment) => sum + Math.max(equipment.unit || 1, 1), 0);
                     const occupancyRate = clamp(occupiedUnits / unitCapacity, 0, 1);
                     const occupiedSlotCount = Math.round(visibleSlots * occupancyRate);
                     const rackCenterOnFloorX = rack.x * meterToPixel + rackWidthPx / 2 - roomCenterX;
                     const rackCenterOnFloorZ = rack.z * meterToPixel + rackDepthPx / 2 - roomCenterZ;
-                    const rackLiftY = -rackHeightPx;
+                    const rackHalfWidth = rackWidthPx / 2;
                     const rackHalfDepth = rackDepthPx / 2;
+                    const frameThickness = Math.max(5, Math.round(Math.min(rackWidthPx, rackDepthPx) * 0.08));
+                    const railThickness = Math.max(2, Math.round(frameThickness * 0.35));
+                    const innerWidth = Math.max(rackWidthPx - frameThickness * 2, frameThickness * 2);
+                    const innerHeight = Math.max(rackHeightPx - frameThickness * 2, frameThickness * 3);
+                    const slotGap = Math.max(1, Math.round(innerHeight / visibleSlots));
 
                     return (
                       <button
@@ -287,92 +291,136 @@ export function FloorPlanScene({
                         style={{
                           left: '50%',
                           top: '50%',
-                          width: rackWidthPx,
-                          height: rackDepthPx,
+                          width: 0,
+                          height: 0,
                           transformStyle: 'preserve-3d',
                           transformOrigin: 'center center',
-                          transform: `translate3d(${rackCenterOnFloorX}px, ${rackCenterOnFloorZ}px, 1px) rotateZ(${rack.rotation_y}deg)`
+                          transform: `translate3d(${rackCenterOnFloorX}px, ${rackCenterOnFloorZ}px, 0px) rotateZ(${rack.rotation_y}deg)`
                         }}
                       >
+                        <span className="sr-only">{rack.name}</span>
                         <div
-                          className={`absolute bottom-0 left-0 rounded-[3px] border ${isSelected ? 'border-cyan-300' : 'border-slate-500'} bg-slate-900/95`}
+                          className="pointer-events-none absolute rounded-full bg-black/45 blur-[2px]"
+                          style={{
+                            width: rackWidthPx * 1.04,
+                            height: rackDepthPx * 1.04,
+                            transform: `translate3d(${-rackHalfWidth * 1.02}px, ${-rackHalfDepth * 1.02}px, -1px)`
+                          }}
+                        />
+                        <div
+                          className={`absolute ${isSelected ? 'outline outline-2 outline-cyan-300/75' : ''}`}
                           style={{
                             width: rackWidthPx,
                             height: rackHeightPx,
-                            transform: `translateY(${rackLiftY}px) translateZ(${rackHalfDepth}px)`
+                            transformStyle: 'preserve-3d',
+                            transform: `translate3d(${-rackHalfWidth}px, ${-rackHeightPx}px, ${-rackHalfDepth}px)`
                           }}
                         >
-                          <div className="absolute inset-[4px] rounded-[2px] border border-emerald-300/30 bg-slate-950/90">
-                            <div className="absolute inset-x-[3px] inset-y-[4px] rounded-[2px] border border-slate-700/80 bg-slate-900/90" />
-                            {Array.from({ length: visibleSlots }).map((_, idx) => (
+                          <div
+                            className={`absolute border ${isSelected ? 'border-cyan-300/80' : 'border-slate-700'} bg-slate-900`}
+                            style={{
+                              width: rackWidthPx,
+                              height: rackHeightPx,
+                              transform: `translate3d(0px, 0px, ${rackDepthPx}px)`
+                            }}
+                          >
+                            <div
+                              className="absolute border border-slate-700 bg-slate-950"
+                              style={{
+                                left: frameThickness,
+                                top: frameThickness,
+                                width: innerWidth,
+                                height: innerHeight
+                              }}
+                            >
                               <div
-                                key={idx}
-                                className="absolute left-[6px] right-[6px] rounded-[1px] border border-white/10"
+                                className="absolute bg-slate-500/90"
                                 style={{
-                                  top: `${(idx / visibleSlots) * 100}%`,
-                                  height: `${100 / visibleSlots}%`,
-                                  backgroundColor: idx >= visibleSlots - occupiedSlotCount ? 'rgba(16, 185, 129, 0.42)' : 'rgba(51, 65, 85, 0.45)'
+                                  left: frameThickness,
+                                  top: 0,
+                                  width: railThickness,
+                                  height: innerHeight
                                 }}
                               />
-                            ))}
+                              <div
+                                className="absolute bg-slate-500/90"
+                                style={{
+                                  right: frameThickness,
+                                  top: 0,
+                                  width: railThickness,
+                                  height: innerHeight
+                                }}
+                              />
+                              {Array.from({ length: visibleSlots }).map((_, idx) => (
+                                <div
+                                  key={idx}
+                                  className="absolute left-0 right-0 border-t border-white/10"
+                                  style={{
+                                    top: `${(idx / visibleSlots) * 100}%`,
+                                    height: `${100 / visibleSlots}%`,
+                                    backgroundColor:
+                                      idx >= visibleSlots - occupiedSlotCount ? 'rgba(16, 185, 129, 0.36)' : 'rgba(71, 85, 105, 0.3)'
+                                  }}
+                                />
+                              ))}
+                              <div className="absolute inset-x-0 bottom-0 border-t border-white/10" style={{ height: slotGap }} />
+                            </div>
                           </div>
+
+                          <div
+                            className="absolute border border-slate-700 bg-slate-900"
+                            style={{
+                              width: rackWidthPx,
+                              height: rackHeightPx,
+                              transform: 'translate3d(0px, 0px, 0px)'
+                            }}
+                          />
+                          <div
+                            className="absolute border border-slate-700 bg-slate-800"
+                            style={{
+                              width: rackDepthPx,
+                              height: rackHeightPx,
+                              transformOrigin: 'left top',
+                              transform: 'translate3d(0px, 0px, 0px) rotateY(90deg)'
+                            }}
+                          />
+                          <div
+                            className="absolute border border-slate-700 bg-slate-800"
+                            style={{
+                              width: rackDepthPx,
+                              height: rackHeightPx,
+                              transformOrigin: 'left top',
+                              transform: `translate3d(${rackWidthPx}px, 0px, 0px) rotateY(90deg)`
+                            }}
+                          />
+                          <div
+                            className="absolute border border-slate-700 bg-slate-900"
+                            style={{
+                              width: rackWidthPx,
+                              height: rackDepthPx,
+                              transformOrigin: 'left top',
+                              transform: 'translate3d(0px, 0px, 0px) rotateX(-90deg)'
+                            }}
+                          />
+                          <div
+                            className="absolute border border-slate-700 bg-slate-900"
+                            style={{
+                              width: rackWidthPx,
+                              height: rackDepthPx,
+                              transformOrigin: 'left top',
+                              transform: `translate3d(0px, ${rackHeightPx}px, 0px) rotateX(-90deg)`
+                            }}
+                          />
                         </div>
 
                         <div
-                          className="absolute bottom-0 left-0 bg-slate-800/85"
+                          className="pointer-events-none absolute rounded bg-slate-950/70 px-1 py-0.5 text-[8px] font-medium text-slate-300"
                           style={{
-                            width: rackDepthPx,
-                            height: rackHeightPx,
-                            transformOrigin: 'left bottom',
-                            transform: `translateY(${rackLiftY}px) rotateY(90deg)`
+                            transform: `translate3d(${-rackHalfWidth + 2}px, ${-rackHeightPx - 12}px, ${rackDepthPx * 0.18}px)`
                           }}
-                        />
-                        <div
-                          className="absolute bottom-0 right-0 bg-slate-800/95"
-                          style={{
-                            width: rackDepthPx,
-                            height: rackHeightPx,
-                            transformOrigin: 'right bottom',
-                            transform: `translateY(${rackLiftY}px) rotateY(-90deg)`
-                          }}
-                        />
-                        <div
-                          className={`absolute bottom-0 left-0 rounded-[3px] border ${isSelected ? 'border-cyan-300/80' : 'border-slate-700'} bg-slate-950/95`}
-                          style={{
-                            width: rackWidthPx,
-                            height: rackHeightPx,
-                            transform: `translateY(${rackLiftY}px) translateZ(${-rackHalfDepth}px)`
-                          }}
-                        />
-                        <div
-                          className="absolute left-0 top-0 rounded-[3px] border border-slate-500/80 bg-slate-800/90"
-                          style={{
-                            width: rackWidthPx,
-                            height: rackDepthPx,
-                            transform: `translateY(${rackLiftY}px) translateZ(${rackHalfDepth}px)`
-                          }}
-                        />
-                        <div
-                          className="absolute left-0 top-0 rounded-[3px] border border-slate-800/90 bg-slate-950/95"
-                          style={{
-                            width: rackWidthPx,
-                            height: rackDepthPx,
-                            transform: 'translateY(0px) translateZ(0px)'
-                          }}
-                        />
-
-                        <span
-                          className="absolute left-1 text-[10px] font-semibold text-cyan-100"
-                          style={{ transform: `translateY(${-rackHeightPx - 10}px) translateZ(${rackDepthPx * 0.6}px)` }}
                         >
-                          {rack.name}
-                        </span>
-                        <span
-                          className="absolute left-1 text-[9px] text-slate-300"
-                          style={{ transform: `translateY(${-rackHeightPx + 2}px) translateZ(${rackDepthPx * 0.6}px)` }}
-                        >
-                          {occupiedUnits}/{unitCapacity}U · {unitsPerSlot}U/slot
-                        </span>
+                          {rack.name} · {occupiedUnits}/{unitCapacity}U
+                        </div>
                       </button>
                     );
                   })}

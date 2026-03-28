@@ -46,6 +46,14 @@ const getRackOccupiedUnits = (rack: FloorPlanRack): number => {
   return occupiedUnitsMap.size;
 };
 
+const getRackEquipmentCount = (rack: FloorPlanRack): number => {
+  if (typeof rack.equipment_count === 'number' && Number.isFinite(rack.equipment_count)) {
+    return Math.max(rack.equipment.length, rack.equipment_count);
+  }
+
+  return rack.equipment.length;
+};
+
 export function FloorPlanScene({
   floorPlan,
   selectedRackId,
@@ -298,6 +306,7 @@ export function FloorPlanScene({
                     const rackHeightPx = Math.max(rackHeightM * meterToPixel, 130);
                     const unitCapacity = Math.max(rack.unit_capacity, 1);
                     const occupiedUnits = getRackOccupiedUnits(rack);
+                    const equipmentCount = getRackEquipmentCount(rack);
                     const rackCenterOnFloorX = (rack.x + rackWidthM / 2 - floorPlan.width / 2) * meterToPixel;
                     const rackCenterOnFloorZ = (rack.z + rackDepthM / 2 - floorPlan.depth / 2) * meterToPixel;
                     const rackHalfWidth = rackWidthPx / 2;
@@ -396,7 +405,7 @@ export function FloorPlanScene({
                                 zIndex: 2
                               }}
                             >
-                              {rack.name} · {occupiedUnits}/{unitCapacity}U
+                              {rack.name} · занято {equipmentCount} · {occupiedUnits}/{unitCapacity}U
                             </div>
                             <div
                               className="absolute border border-slate-700/95 bg-slate-950/95"
@@ -520,6 +529,7 @@ export function FloorPlanScene({
               <div className="mt-2 space-y-1 text-slate-700">
                 <p>Координаты: X={selectedRack.x.toFixed(2)}м, Y={selectedRack.z.toFixed(2)}м</p>
                 <p>Размер: {selectedRack.width}×{selectedRack.depth}×{selectedRack.height} м</p>
+                <p>Оборудование: {getRackEquipmentCount(selectedRack)}</p>
                 <p>U-слоты: {selectedRack.unit_capacity} / занято {getRackOccupiedUnits(selectedRack)}</p>
               </div>
             </>
@@ -535,7 +545,7 @@ export function FloorPlanScene({
                 <li>Энергия: {hoveredRack.energy_consumption ?? 0} W / {hoveredRack.energy_limit ?? 0} W</li>
                 <li>Вес: {hoveredRack.weight ?? 0} kg</li>
                 <li>Зона: {hoveredRack.zone_name ?? floorPlan.zone_name ?? 'n/a'}</li>
-                <li>Оборудование: {hoveredRack.equipment.length}</li>
+                <li>Оборудование: {getRackEquipmentCount(hoveredRack)}</li>
                 <li>Статус: {(hoveredRack.energy_limit && hoveredRack.energy_consumption && hoveredRack.energy_consumption > hoveredRack.energy_limit) ? 'warning' : 'active'}</li>
               </ul>
             </div>

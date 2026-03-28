@@ -258,13 +258,142 @@ const normalizeRackEquipment = (equipment: unknown): FloorPlanRack['equipment'] 
     }, []);
 };
 
+const getEquipmentCollectionFromSource = (sourceRack: Record<string, unknown>): unknown => (
+  sourceRack.equipment
+  ?? sourceRack.installed_equipment
+  ?? sourceRack.devices
+  ?? sourceRack.items
+);
+
+const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment'] => {
+  if (!Array.isArray(slots)) {
+    return [];
+  }
+
+  type SlotAggregate = {
+    base: FloorPlanRack['equipment'][number];
+    minUnit: number | null;
+    maxUnit: number | null;
+    explicitStartUnit: number | null;
+    explicitUnits: number | null;
+    occupiedUnits: Set<number>;
+  };
+
+  const aggregatedByEquipmentId = new Map<number, SlotAggregate>();
+
+  slots.forEach((rawSlot) => {
+    if (!rawSlot || typeof rawSlot !== 'object') {
+      return;
+    }
+
+    const slotSource = rawSlot as Record<string, unknown>;
+    const slotUnit = toNumberOrNull(
+      slotSource.unit
+      ?? slotSource.unit_number
+      ?? slotSource.u
+      ?? slotSource.position_u
+      ?? slotSource.u_position
+      ?? slotSource.start_unit
+    );
+
+    const nestedEquipmentSource = slotSource.equipment
+      ?? slotSource.installed_equipment
+      ?? slotSource.device
+      ?? slotSource.item;
+
+    const normalizedFromNested = normalizeRackEquipment(
+      nestedEquipmentSource ? [nestedEquipmentSource] : [slotSource]
+    )[0];
+
+    if (!normalizedFromNested) {
+      return;
+    }
+
+    const existing = aggregatedByEquipmentId.get(normalizedFromNested.id);
+    const explicitStartUnit = toNumberOrNull(slotSource.start_unit) ?? normalizedFromNested.startUnit ?? null;
+    const explicitUnits = toNumberOrNull(slotSource.size_u ?? slotSource.units ?? slotSource.unit_size) ?? normalizedFromNested.unit ?? null;
+
+    if (!existing) {
+      const occupiedUnits = new Set<number>();
+      if (slotUnit !== null) {
+        occupiedUnits.add(slotUnit);
+      }
+
+      aggregatedByEquipmentId.set(normalizedFromNested.id, {
+        base: normalizedFromNested,
+        minUnit: slotUnit,
+        maxUnit: slotUnit,
+        explicitStartUnit,
+        explicitUnits,
+        occupiedUnits
+      });
+      return;
+    }
+
+    if (slotUnit !== null) {
+      existing.occupiedUnits.add(slotUnit);
+      existing.minUnit = existing.minUnit === null ? slotUnit : Math.min(existing.minUnit, slotUnit);
+      existing.maxUnit = existing.maxUnit === null ? slotUnit : Math.max(existing.maxUnit, slotUnit);
+    }
+
+    if (explicitStartUnit !== null) {
+      existing.explicitStartUnit = existing.explicitStartUnit === null
+        ? explicitStartUnit
+        : Math.max(existing.explicitStartUnit, explicitStartUnit);
+    }
+
+    if (explicitUnits !== null) {
+      existing.explicitUnits = existing.explicitUnits === null
+        ? explicitUnits
+        : Math.max(existing.explicitUnits, explicitUnits);
+    }
+  });
+
+  return Array.from(aggregatedByEquipmentId.values()).map((aggregate) => {
+    const occupiedUnits = aggregate.occupiedUnits.size;
+    const inferredUnitsByRange = (aggregate.minUnit !== null && aggregate.maxUnit !== null)
+      ? Math.max(1, aggregate.maxUnit - aggregate.minUnit + 1)
+      : null;
+    const normalizedUnit = Math.max(
+      1,
+      aggregate.explicitUnits
+      ?? inferredUnitsByRange
+      ?? occupiedUnits
+      ?? aggregate.base.unit
+      ?? 1
+    );
+
+    return {
+      ...aggregate.base,
+      unit: normalizedUnit,
+      startUnit: aggregate.explicitStartUnit
+        ?? aggregate.maxUnit
+        ?? aggregate.base.startUnit
+        ?? null
+    };
+  });
+};
+
+const normalizeRackEquipmentFromAnySource = (sourceRack: Record<string, unknown>): FloorPlanRack['equipment'] => {
+  const directEquipment = normalizeRackEquipment(getEquipmentCollectionFromSource(sourceRack));
+  if (directEquipment.length) {
+    return directEquipment;
+  }
+
+  return normalizeEquipmentFromSlots(sourceRack.slots ?? sourceRack.rack_slots ?? sourceRack.units);
+};
+
+const resolveRackEquipmentCount = (source: Record<string, unknown>, equipment: FloorPlanRack['equipment']): number => {
+  const sourceCount = toNumberOrNull(source.equipment_count);
+  return Math.max(equipment.length, sourceCount ?? 0);
+};
+
 const normalizeEquipmentFromSourceRack = (sourceRack: Record<string, unknown> | null): FloorPlanRack['equipment'] => {
   if (!sourceRack) {
     return [];
   }
 
-  const sourceEquipment = sourceRack.equipment ?? sourceRack.installed_equipment ?? sourceRack.devices ?? sourceRack.items ?? [];
-  return normalizeRackEquipment(sourceEquipment);
+  return normalizeRackEquipmentFromAnySource(sourceRack);
 };
 
 const normalizeFloorPlanRack = (rack: unknown): FloorPlanRack | null => {
@@ -289,8 +418,7 @@ const normalizeFloorPlanRack = (rack: unknown): FloorPlanRack | null => {
     return null;
   }
 
-  const rawEquipment = source.equipment ?? source.installed_equipment ?? source.devices ?? source.items;
-  const normalizedEquipment = normalizeRackEquipment(rawEquipment);
+  const normalizedEquipment = normalizeRackEquipmentFromAnySource(source);
 
   return {
     id,
@@ -311,7 +439,7 @@ const normalizeFloorPlanRack = (rack: unknown): FloorPlanRack | null => {
     energy_limit: toNumberOrNull(source.energy_limit),
     weight: toNumberOrNull(source.weight ?? source.current_weight),
     zone_name: source.zone_name ? String(source.zone_name) : null,
-    equipment_count: normalizedEquipment.length || toNumberOrNull(source.equipment_count) || 0
+    equipment_count: resolveRackEquipmentCount(source, normalizedEquipment)
   };
 };
 
@@ -367,7 +495,7 @@ const enrichFloorPlanWithLinkedCabinets = async (floorPlan: FloorPlan): Promise<
       ...rack,
       unit_capacity: Math.max(1, sourceCapacity ?? rack.unit_capacity ?? 42),
       equipment,
-      equipment_count: equipment.length
+      equipment_count: sourceRack ? resolveRackEquipmentCount(sourceRack, equipment) : equipment.length
     };
   });
 

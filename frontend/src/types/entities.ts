@@ -75,6 +75,7 @@ export interface FloorPlanRackEquipment {
   id: number;
   name: string;
   unit: number;
+  startUnit?: number | null;
   type?: string;
   status?: EntityStatus;
 }

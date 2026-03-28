@@ -162,6 +162,10 @@ export function FloorPlansPage() {
   const selectedPlanDraft = planDraft;
   const selectedRack = selectedPlanDraft?.racks?.find((rack) => rack.id === selectedRackId) ?? null;
   const isRackLinkSelected = Boolean(newRackCabinetId);
+  const usedCabinetIds = useMemo(
+    () => new Set((selectedPlanDraft?.racks ?? []).map((rack) => rack.switch_cabinet_id).filter((id): id is number => Number.isFinite(id ?? NaN))),
+    [selectedPlanDraft?.racks]
+  );
 
   const cabinetsForPlanZone = useMemo(() => {
     if (!selectedPlanDraft?.zone_id) {
@@ -242,10 +246,16 @@ export function FloorPlansPage() {
       return;
     }
 
+    const selectedCabinetId = Number(newRackCabinetId);
+    if (usedCabinetIds.has(selectedCabinetId)) {
+      setRackFormError('Эта стойка уже добавлена на план. Выберите другую стойку.');
+      return;
+    }
+
     setRackFormError(null);
     createRack.mutate({
       floorplan_id: selectedPlanDraft.id,
-      switch_cabinet_id: Number(newRackCabinetId),
+      switch_cabinet_id: selectedCabinetId,
       name: newRackName || `Rittal-${(selectedPlanDraft.racks?.length ?? 0) + 1}`,
       x: 0,
       z: 0,
@@ -264,13 +274,25 @@ export function FloorPlansPage() {
 
     const totalUnits = Math.max(1, selectedRack.unit_capacity);
     const occupiedByUnit = new Map<number, FloorPlanRack['equipment'][number]>();
-    let cursor = totalUnits;
+    let fallbackCursor = totalUnits;
 
     selectedRack.equipment.forEach((equipment) => {
       const consumedUnits = Math.max(1, Number(equipment.unit) || 1);
-      for (let offset = 0; offset < consumedUnits && cursor > 0; offset += 1) {
-        occupiedByUnit.set(cursor, equipment);
-        cursor -= 1;
+      const hasExplicitStart = Number.isFinite(Number(equipment.startUnit));
+      const startUnit = hasExplicitStart
+        ? Math.max(1, Math.min(totalUnits, Number(equipment.startUnit)))
+        : fallbackCursor;
+
+      for (let offset = 0; offset < consumedUnits; offset += 1) {
+        const unit = startUnit - offset;
+        if (unit < 1 || unit > totalUnits || occupiedByUnit.has(unit)) {
+          continue;
+        }
+        occupiedByUnit.set(unit, equipment);
+      }
+
+      if (!hasExplicitStart) {
+        fallbackCursor = Math.max(1, fallbackCursor - consumedUnits);
       }
     });
 
@@ -335,9 +357,11 @@ export function FloorPlansPage() {
             </FormField>
             <FormField label="Связать с существующей стойкой">
               <SelectInput value={newRackCabinetId} onChange={(event) => setNewRackCabinetId(event.target.value)}>
-                <option value="">Без связи</option>
+                <option value="" disabled>Без связи</option>
                 {cabinetsForPlanZone.map((cabinet: SwitchCabinet) => (
-                  <option key={cabinet.id} value={cabinet.id}>{cabinet.name} · {cabinet.serial_number}</option>
+                  <option key={cabinet.id} value={cabinet.id} disabled={usedCabinetIds.has(cabinet.id)}>
+                    {cabinet.name} · {cabinet.serial_number}{usedCabinetIds.has(cabinet.id) ? ' (уже на плане)' : ''}
+                  </option>
                 ))}
               </SelectInput>
             </FormField>

@@ -290,8 +290,65 @@ const getEquipmentCollectionFromSource = (sourceRack: Record<string, unknown>): 
 const getSlotsCollectionFromSource = (sourceRack: Record<string, unknown>): unknown => (
   sourceRack.slots
   ?? sourceRack.rack_slots
+  ?? sourceRack.rackSlots
+  ?? sourceRack.u_slots
+  ?? sourceRack.cabinet_slots
   ?? sourceRack.units
 );
+
+const hasMeaningfulEquipmentName = (value: unknown): boolean => {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return !['-', 'empty', 'free', 'available', 'n/a', 'none', 'свободно', 'пусто'].includes(normalized);
+};
+
+const isTruthySlotOccupiedFlag = (value: unknown): boolean => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value > 0;
+  }
+
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return ['1', 'true', 'occupied', 'used', 'busy', 'installed', 'filled'].includes(normalized);
+};
+
+const resolveSlotUnit = (slotSource: Record<string, unknown>): number | null => {
+  const candidates = [
+    slotSource.unit,
+    slotSource.unit_number,
+    slotSource.unitNumber,
+    slotSource.u,
+    slotSource.u_index,
+    slotSource.u_number,
+    slotSource.position_u,
+    slotSource.u_position,
+    slotSource.start_unit,
+    slotSource.slot,
+    slotSource.slot_number,
+    slotSource.slot_index
+  ];
+
+  for (const rawValue of candidates) {
+    const parsed = toNumberOrNull(rawValue);
+    if (parsed === null) {
+      continue;
+    }
+
+    if (parsed === 0) {
+      return 1;
+    }
+
+    return parsed;
+  }
+
+  return null;
+};
 
 const calculateOccupiedUnits = (equipment: FloorPlanRack['equipment']): number => {
   const occupiedUnits = new Set<number>();
@@ -380,19 +437,30 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
     }
 
     const slotSource = rawSlot as Record<string, unknown>;
-    const slotUnit = toNumberOrNull(
-      slotSource.unit
-      ?? slotSource.unit_number
-      ?? slotSource.u
-      ?? slotSource.position_u
-      ?? slotSource.u_position
-      ?? slotSource.start_unit
-    );
+    const slotUnit = resolveSlotUnit(slotSource);
 
     const nestedEquipmentSource = slotSource.equipment
       ?? slotSource.installed_equipment
       ?? slotSource.device
-      ?? slotSource.item;
+      ?? slotSource.item
+      ?? slotSource.equipment_data;
+
+    const fallbackSlotHasEquipmentIdentity = (
+      toNumberOrNull(slotSource.equipment_id ?? slotSource.device_id ?? slotSource.installed_equipment_id ?? slotSource.item_id) !== null
+      || hasMeaningfulEquipmentName(slotSource.equipment_name ?? slotSource.device_name ?? slotSource.name ?? slotSource.title)
+    );
+
+    const slotIsMarkedOccupied = isTruthySlotOccupiedFlag(
+      slotSource.occupied
+      ?? slotSource.is_occupied
+      ?? slotSource.busy
+      ?? slotSource.in_use
+      ?? slotSource.status
+    );
+
+    if (!nestedEquipmentSource && !fallbackSlotHasEquipmentIdentity && !slotIsMarkedOccupied) {
+      return;
+    }
 
     const normalizedFromNested = normalizeRackEquipment(
       nestedEquipmentSource ? [nestedEquipmentSource] : [slotSource]
@@ -402,7 +470,7 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
       return;
     }
 
-    const explicitStartUnit = toNumberOrNull(slotSource.start_unit) ?? normalizedFromNested.startUnit ?? null;
+    const explicitStartUnit = resolveSlotUnit(slotSource) ?? normalizedFromNested.startUnit ?? null;
     const explicitUnits = toNumberOrNull(slotSource.size_u ?? slotSource.units ?? slotSource.unit_size) ?? normalizedFromNested.unit ?? null;
     const dedupeKey = [
       normalizedFromNested.id,
@@ -591,11 +659,33 @@ const enrichFloorPlanWithLinkedCabinets = async (floorPlan: FloorPlan): Promise<
     const equipment = normalizedEquipment.length ? normalizedEquipment : rack.equipment;
 
     if (sourceRack) {
+      const rawSlots = getSlotsCollectionFromSource(sourceRack);
+      const rawSlotSamples = Array.isArray(rawSlots)
+        ? rawSlots
+          .slice(0, 5)
+          .map((slot) => (slot && typeof slot === 'object' ? Object.keys(slot as Record<string, unknown>) : []))
+        : [];
+
       // Temporary debug output for verifying equipment source selection in linked cabinets.
       console.debug('[floorplan:equipment-normalization]', {
         linkedRackId: rack.switch_cabinet_id ?? null,
+        rawSourceKeys: Object.keys(sourceRack),
+        rawSlotsLength: Array.isArray(rawSlots) ? rawSlots.length : 0,
+        rawSlotSamples,
         equipmentFromCollectionLength: normalizedEquipmentSelection?.equipmentFromCollection.length ?? 0,
+        equipmentFromCollection: (normalizedEquipmentSelection?.equipmentFromCollection ?? []).map((item) => ({
+          id: item.id,
+          name: item.name,
+          unit: item.unit,
+          startUnit: item.startUnit ?? null
+        })),
         equipmentFromSlotsLength: normalizedEquipmentSelection?.equipmentFromSlots.length ?? 0,
+        equipmentFromSlots: (normalizedEquipmentSelection?.equipmentFromSlots ?? []).map((item) => ({
+          id: item.id,
+          name: item.name,
+          unit: item.unit,
+          startUnit: item.startUnit ?? null
+        })),
         finalEquipmentLength: equipment.length,
         finalEquipment: equipment.map((item) => ({
           id: item.id,

@@ -89,8 +89,8 @@ export function FloorPlanScene({
       return;
     }
 
-    const rackWidth = selectedRack.width > 0 ? selectedRack.width : 0.6;
-    const rackDepth = selectedRack.depth > 0 ? selectedRack.depth : 1;
+    const rackWidth = 0.6;
+    const rackDepth = 1;
     const rackCenterOnFloorX = (selectedRack.x + rackWidth / 2 - floorPlan.width / 2) * meterToPixel;
     const rackCenterOnFloorZ = (selectedRack.z + rackDepth / 2 - floorPlan.depth / 2) * meterToPixel;
     setPan3d({
@@ -261,9 +261,9 @@ export function FloorPlanScene({
                   />
                   {racks.map((rack) => {
                     const isSelected = selectedRackId === rack.id;
-                    const rackWidthM = rack.width > 0 ? rack.width : 0.6;
-                    const rackDepthM = rack.depth > 0 ? rack.depth : 1;
-                    const rackHeightM = rack.height > 0 ? rack.height : 2.1;
+                    const rackWidthM = 0.6;
+                    const rackDepthM = 1;
+                    const rackHeightM = clamp(rack.height > 0 ? rack.height : 2.1, 2, 2.2);
                     const rackWidthPx = Math.max(rackWidthM * meterToPixel, 24);
                     const rackDepthPx = Math.max(rackDepthM * meterToPixel, 36);
                     const rackHeightPx = Math.max(rackHeightM * meterToPixel, 130);
@@ -278,12 +278,12 @@ export function FloorPlanScene({
                     const innerWidth = Math.max(rackWidthPx - panelThickness * 2.4, panelThickness * 2);
                     const innerHeight = Math.max(rackHeightPx - panelThickness * 2.4, panelThickness * 3);
                     const unitHeight = innerHeight / unitCapacity;
-                    const frontZ = rackHalfDepth - panelThickness / 2;
-                    const backZ = -rackHalfDepth + panelThickness / 2;
-                    const leftX = -rackHalfWidth + panelThickness / 2;
-                    const rightX = rackHalfWidth - panelThickness / 2;
-                    const topY = -rackHeightPx + panelThickness / 2;
-                    const bottomY = -panelThickness / 2;
+                    const frontZ = rackHalfDepth;
+                    const backZ = -rackHalfDepth;
+                    const leftX = -rackHalfWidth;
+                    const rightX = rackHalfWidth;
+                    const topY = -rackHeightPx;
+                    const bottomY = 0;
                     const equipmentSegments: Array<{ key: string; start: number; units: number; label: string; real: boolean }> = [];
                     let cursor = 0;
 

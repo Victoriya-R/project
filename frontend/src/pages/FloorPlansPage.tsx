@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Save, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { Button } from '../components/common/Button';
 import { DataTable } from '../components/common/DataTable';
@@ -57,6 +57,7 @@ export function FloorPlansPage() {
   const [selectedRackUnit, setSelectedRackUnit] = useState<number | null>(null);
   const [newRackName, setNewRackName] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [rackFormError, setRackFormError] = useState<string | null>(null);
 
   const plans = plansQuery.data?.data ?? [];
   const selectedPlan = useMemo(() => plans.find((item) => item.id === selectedPlanId) ?? plans[0] ?? null, [plans, selectedPlanId]);
@@ -87,6 +88,12 @@ export function FloorPlansPage() {
       setPlanDraft(detailQuery.data.data);
     }
   }, [detailQuery.data]);
+
+  useEffect(() => {
+    if (newRackCabinetId) {
+      setRackFormError(null);
+    }
+  }, [newRackCabinetId]);
 
   useEffect(() => {
     setSelectedRackUnit(null);
@@ -140,6 +147,7 @@ export function FloorPlansPage() {
       setNewRackName('');
 
       setNewRackCabinetId('');
+      setRackFormError(null);
       setErrorMessage(null);
       await invalidate();
     },
@@ -153,6 +161,7 @@ export function FloorPlansPage() {
 
   const selectedPlanDraft = planDraft;
   const selectedRack = selectedPlanDraft?.racks?.find((rack) => rack.id === selectedRackId) ?? null;
+  const isRackLinkSelected = Boolean(newRackCabinetId);
 
   const cabinetsForPlanZone = useMemo(() => {
     if (!selectedPlanDraft?.zone_id) {
@@ -223,6 +232,54 @@ export function FloorPlansPage() {
     }, 220);
   };
 
+  const addRackToPlan = () => {
+    if (!selectedPlanDraft) {
+      return;
+    }
+
+    if (!newRackCabinetId) {
+      setRackFormError('Выберите существующую стойку');
+      return;
+    }
+
+    setRackFormError(null);
+    createRack.mutate({
+      floorplan_id: selectedPlanDraft.id,
+      switch_cabinet_id: Number(newRackCabinetId),
+      name: newRackName || `Rittal-${(selectedPlanDraft.racks?.length ?? 0) + 1}`,
+      x: 0,
+      z: 0,
+      width: 0.6,
+      depth: 1,
+      height: 2.2,
+      unit_capacity: 42,
+      equipment: []
+    });
+  };
+
+  const rackSlots = useMemo(() => {
+    if (!selectedRack) {
+      return [];
+    }
+
+    const totalUnits = Math.max(1, selectedRack.unit_capacity);
+    const occupiedByUnit = new Map<number, FloorPlanRack['equipment'][number]>();
+    let cursor = totalUnits;
+
+    selectedRack.equipment.forEach((equipment) => {
+      const consumedUnits = Math.max(1, Number(equipment.unit) || 1);
+      for (let offset = 0; offset < consumedUnits && cursor > 0; offset += 1) {
+        occupiedByUnit.set(cursor, equipment);
+        cursor -= 1;
+      }
+    });
+
+    return Array.from({ length: totalUnits }).map((_, index) => {
+      const unit = totalUnits - index;
+      return { unit, equipment: occupiedByUnit.get(unit) ?? null };
+    });
+  }, [selectedRack]);
+
   if (plansQuery.isLoading || zonesQuery.isLoading || cabinetsQuery.isLoading) {
     return <LoadingState label="Загружаем планы помещений..." />;
   }
@@ -286,23 +343,13 @@ export function FloorPlansPage() {
             </FormField>
             <Button
               icon={<Plus className="h-4 w-4" />}
-              onClick={() => createRack.mutate({
-
-                floorplan_id: selectedPlanDraft.id,
-                switch_cabinet_id: newRackCabinetId ? Number(newRackCabinetId) : null,
-                name: newRackName || `Rittal-${(selectedPlanDraft.racks?.length ?? 0) + 1}`,
-                x: 0,
-                z: 0,
-                width: 0.6,
-                depth: 1,
-                height: 2.2,
-                unit_capacity: 42,
-                equipment: []
-              })}
+              disabled={!isRackLinkSelected}
+              onClick={addRackToPlan}
             >
               Добавить стойку
             </Button>
           </div>
+          {rackFormError ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">{rackFormError}</div> : null}
 
           <FloorPlanScene
 
@@ -318,15 +365,11 @@ export function FloorPlansPage() {
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">Слоты стойки: {selectedRack.name}</h3>
-                <Button icon={<Save className="h-4 w-4" />} onClick={() => updateRack.mutate({ id: selectedRack.id, payload: { equipment: selectedRack.equipment } })}>
-                  Сохранить наполнение
-                </Button>
+                <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">Режим просмотра</span>
               </div>
+              <p className="mb-3 text-sm text-slate-500">Размещение оборудования по слотам доступно только для чтения: данные берутся из привязанной реальной стойки.</p>
               <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                {Array.from({ length: selectedRack.unit_capacity }).map((_, index) => {
-                  const unit = selectedRack.unit_capacity - index;
-                  const item = selectedRack.equipment.find((equipment) => equipment.unit === unit);
-
+                {rackSlots.map(({ unit, equipment: item }) => {
                   return (
                     <button
                       key={unit}
@@ -345,7 +388,7 @@ export function FloorPlansPage() {
               {selectedRackUnit ? (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
                   {(() => {
-                    const selectedUnitEquipment = selectedRack.equipment.find((equipment) => equipment.unit === selectedRackUnit);
+                    const selectedUnitEquipment = rackSlots.find((slot) => slot.unit === selectedRackUnit)?.equipment;
                     if (!selectedUnitEquipment) {
                       return (
                         <div>

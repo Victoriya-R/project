@@ -369,6 +369,42 @@ const calculateOccupiedUnits = (equipment: FloorPlanRack['equipment']): number =
   return occupiedUnits.size;
 };
 
+const hasAnyExplicitStartUnit = (equipment: FloorPlanRack['equipment']): boolean => (
+  equipment.some((item) => toNumberOrNull(item.startUnit) !== null)
+);
+
+const mergeEquipmentWithExistingPositions = (
+  normalizedEquipment: FloorPlanRack['equipment'],
+  existingEquipment: FloorPlanRack['equipment']
+): FloorPlanRack['equipment'] => {
+  const existingById = new Map<number, FloorPlanRack['equipment'][number]>();
+  const existingByName = new Map<string, FloorPlanRack['equipment'][number]>();
+
+  existingEquipment.forEach((item) => {
+    if (toNumberOrNull(item.startUnit) === null) {
+      return;
+    }
+
+    existingById.set(item.id, item);
+    existingByName.set(item.name.trim().toLowerCase(), item);
+  });
+
+  return normalizedEquipment.map((item) => {
+    const existingByIdentity = existingById.get(item.id)
+      ?? existingByName.get(item.name.trim().toLowerCase());
+
+    if (!existingByIdentity || toNumberOrNull(item.startUnit) !== null) {
+      return item;
+    }
+
+    return {
+      ...item,
+      startUnit: existingByIdentity.startUnit ?? item.startUnit,
+      unit: Math.max(1, toNumberOrNull(item.unit) ?? toNumberOrNull(existingByIdentity.unit) ?? 1)
+    };
+  });
+};
+
 const isLikelyAggregatedSummary = (
   equipmentFromCollection: FloorPlanRack['equipment'],
   equipmentFromSlots: FloorPlanRack['equipment']
@@ -655,8 +691,13 @@ const enrichFloorPlanWithLinkedCabinets = async (floorPlan: FloorPlan): Promise<
     const sourceRack = rack.switch_cabinet_id ? cabinetsMap.get(rack.switch_cabinet_id) ?? null : null;
     const normalizedEquipmentSelection = sourceRack ? pickRackEquipmentSource(sourceRack) : null;
     const normalizedEquipment = normalizedEquipmentSelection?.equipment ?? normalizeEquipmentFromSourceRack(sourceRack);
+    const mergedEquipment = mergeEquipmentWithExistingPositions(normalizedEquipment, rack.equipment);
+    const normalizedHasPositions = hasAnyExplicitStartUnit(mergedEquipment);
+    const rackHasPositions = hasAnyExplicitStartUnit(rack.equipment);
     const sourceCapacity = sourceRack ? toNumberOrNull(sourceRack.unit_capacity ?? sourceRack.units_capacity ?? sourceRack.capacity_u) : null;
-    const equipment = normalizedEquipment.length ? normalizedEquipment : rack.equipment;
+    const equipment = normalizedEquipment.length
+      ? (normalizedHasPositions || !rackHasPositions ? mergedEquipment : rack.equipment)
+      : rack.equipment;
 
     if (sourceRack) {
       const rawSlots = getSlotsCollectionFromSource(sourceRack);
@@ -686,6 +727,8 @@ const enrichFloorPlanWithLinkedCabinets = async (floorPlan: FloorPlan): Promise<
           unit: item.unit,
           startUnit: item.startUnit ?? null
         })),
+        normalizedHasPositions,
+        rackHasPositions,
         finalEquipmentLength: equipment.length,
         finalEquipment: equipment.map((item) => ({
           id: item.id,

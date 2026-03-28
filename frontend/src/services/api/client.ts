@@ -287,6 +287,77 @@ const getEquipmentCollectionFromSource = (sourceRack: Record<string, unknown>): 
   ?? sourceRack.items
 );
 
+const getSlotsCollectionFromSource = (sourceRack: Record<string, unknown>): unknown => (
+  sourceRack.slots
+  ?? sourceRack.rack_slots
+  ?? sourceRack.units
+);
+
+const calculateOccupiedUnits = (equipment: FloorPlanRack['equipment']): number => {
+  const occupiedUnits = new Set<number>();
+
+  equipment.forEach((item) => {
+    const normalizedUnits = Math.max(1, toNumberOrNull(item.unit) ?? 1);
+    const startUnit = toNumberOrNull(item.startUnit);
+
+    if (startUnit === null) {
+      return;
+    }
+
+    for (let unitOffset = 0; unitOffset < normalizedUnits; unitOffset += 1) {
+      occupiedUnits.add(startUnit + unitOffset);
+    }
+  });
+
+  return occupiedUnits.size;
+};
+
+const isLikelyAggregatedSummary = (
+  equipmentFromCollection: FloorPlanRack['equipment'],
+  equipmentFromSlots: FloorPlanRack['equipment']
+): boolean => {
+  if (equipmentFromCollection.length !== 1 || equipmentFromSlots.length <= 1) {
+    return false;
+  }
+
+  const [collectionItem] = equipmentFromCollection;
+  const slotStartUnits = new Set(
+    equipmentFromSlots
+      .map((item) => toNumberOrNull(item.startUnit))
+      .filter((item): item is number => item !== null)
+  );
+
+  return (
+    slotStartUnits.size > 1
+    && (
+      toNumberOrNull(collectionItem.startUnit) === null
+      || calculateOccupiedUnits(equipmentFromCollection) < calculateOccupiedUnits(equipmentFromSlots)
+    )
+  );
+};
+
+const pickRackEquipmentSource = (sourceRack: Record<string, unknown>): {
+  equipment: FloorPlanRack['equipment'];
+  equipmentFromCollection: FloorPlanRack['equipment'];
+  equipmentFromSlots: FloorPlanRack['equipment'];
+} => {
+  const equipmentFromCollection = normalizeRackEquipment(getEquipmentCollectionFromSource(sourceRack));
+  const equipmentFromSlots = normalizeEquipmentFromSlots(getSlotsCollectionFromSource(sourceRack));
+  const collectionOccupiedUnits = calculateOccupiedUnits(equipmentFromCollection);
+  const slotsOccupiedUnits = calculateOccupiedUnits(equipmentFromSlots);
+  const shouldPreferSlots = (
+    equipmentFromSlots.length > equipmentFromCollection.length
+    || slotsOccupiedUnits > collectionOccupiedUnits
+    || isLikelyAggregatedSummary(equipmentFromCollection, equipmentFromSlots)
+  );
+
+  return {
+    equipment: shouldPreferSlots ? equipmentFromSlots : equipmentFromCollection,
+    equipmentFromCollection,
+    equipmentFromSlots
+  };
+};
+
 const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment'] => {
   if (!Array.isArray(slots)) {
     return [];
@@ -402,12 +473,12 @@ const normalizeEquipmentFromSlots = (slots: unknown): FloorPlanRack['equipment']
 };
 
 const normalizeRackEquipmentFromAnySource = (sourceRack: Record<string, unknown>): FloorPlanRack['equipment'] => {
-  const directEquipment = normalizeRackEquipment(getEquipmentCollectionFromSource(sourceRack));
-  if (directEquipment.length) {
-    return directEquipment;
+  const { equipment, equipmentFromCollection, equipmentFromSlots } = pickRackEquipmentSource(sourceRack);
+  if (equipment.length) {
+    return equipment;
   }
 
-  return normalizeEquipmentFromSlots(sourceRack.slots ?? sourceRack.rack_slots ?? sourceRack.units);
+  return equipmentFromSlots.length ? equipmentFromSlots : equipmentFromCollection;
 };
 
 const resolveRackEquipmentCount = (source: Record<string, unknown>, equipment: FloorPlanRack['equipment']): number => {
@@ -514,9 +585,26 @@ const enrichFloorPlanWithLinkedCabinets = async (floorPlan: FloorPlan): Promise<
 
   const enrichedRacks = racks.map((rack) => {
     const sourceRack = rack.switch_cabinet_id ? cabinetsMap.get(rack.switch_cabinet_id) ?? null : null;
-    const normalizedEquipment = normalizeEquipmentFromSourceRack(sourceRack);
+    const normalizedEquipmentSelection = sourceRack ? pickRackEquipmentSource(sourceRack) : null;
+    const normalizedEquipment = normalizedEquipmentSelection?.equipment ?? normalizeEquipmentFromSourceRack(sourceRack);
     const sourceCapacity = sourceRack ? toNumberOrNull(sourceRack.unit_capacity ?? sourceRack.units_capacity ?? sourceRack.capacity_u) : null;
     const equipment = normalizedEquipment.length ? normalizedEquipment : rack.equipment;
+
+    if (sourceRack) {
+      // Temporary debug output for verifying equipment source selection in linked cabinets.
+      console.debug('[floorplan:equipment-normalization]', {
+        linkedRackId: rack.switch_cabinet_id ?? null,
+        equipmentFromCollectionLength: normalizedEquipmentSelection?.equipmentFromCollection.length ?? 0,
+        equipmentFromSlotsLength: normalizedEquipmentSelection?.equipmentFromSlots.length ?? 0,
+        finalEquipmentLength: equipment.length,
+        finalEquipment: equipment.map((item) => ({
+          id: item.id,
+          name: item.name,
+          unit: item.unit,
+          startUnit: item.startUnit ?? null
+        }))
+      });
+    }
 
     return {
       ...rack,

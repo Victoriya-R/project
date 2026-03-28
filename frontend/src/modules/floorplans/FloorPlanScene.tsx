@@ -307,6 +307,17 @@ export function FloorPlanScene({
                     const unitCapacity = Math.max(rack.unit_capacity, 1);
                     const occupiedUnits = getRackOccupiedUnits(rack);
                     const equipmentCount = getRackEquipmentCount(rack);
+                    console.log('[floorplan:scene-rack-before-segments]', {
+                      rackId: rack.id,
+                      equipment_count: rack.equipment_count ?? null,
+                      equipmentLength: rack.equipment.length,
+                      equipment: rack.equipment.map((item) => ({
+                        id: item.id,
+                        name: item.name,
+                        unit: item.unit,
+                        startUnit: item.startUnit ?? null
+                      }))
+                    });
                     const rackCenterOnFloorX = (rack.x + rackWidthM / 2 - floorPlan.width / 2) * meterToPixel;
                     const rackCenterOnFloorZ = (rack.z + rackDepthM / 2 - floorPlan.depth / 2) * meterToPixel;
                     const rackHalfWidth = rackWidthPx / 2;

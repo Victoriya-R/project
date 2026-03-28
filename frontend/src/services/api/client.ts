@@ -704,6 +704,20 @@ const enrichFloorPlanWithLinkedCabinets = async (floorPlan: FloorPlan): Promise<
     };
   });
 
+  enrichedRacks.forEach((rack) => {
+    console.log('[floorplan:final-rack]', {
+      linkedRackId: rack.switch_cabinet_id ?? null,
+      equipment_count: rack.equipment_count ?? null,
+      equipmentLength: rack.equipment.length,
+      equipment: rack.equipment.map((item) => ({
+        id: item.id,
+        name: item.name,
+        unit: item.unit,
+        startUnit: item.startUnit ?? null
+      }))
+    });
+  });
+
   return {
     ...normalized,
     racks: enrichedRacks

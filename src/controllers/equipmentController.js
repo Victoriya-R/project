@@ -881,7 +881,11 @@ export const getSwitchCabinet = async (req, res) => {
     // 2) оборудование в стойке (берём из assets)
     const equipment = await new Promise((resolve, reject) => {
       db.all(
-        'SELECT id, name, type, model, serial, status, weight, energy_consumption FROM assets WHERE switch_cabinet_id = ? AND owner_user_id = ?',
+        `SELECT id, name, type, model, serial, status, weight, energy_consumption,
+                COALESCE(rack_unit_size, 1) AS unit_size,
+                rack_start_unit AS startUnit
+         FROM assets
+         WHERE switch_cabinet_id = ? AND owner_user_id = ?`,
         [id, getOwnerUserId(req)],
         (err, rows) => {
           if (err) return reject(err);
@@ -951,9 +955,20 @@ export const deleteSwitchCabinet = async (req, res) => {
 export const placeInSwitchCabinet = async (req, res) => {
   const equipment_id = Number(req.body.equipment_id);
   const switch_cabinet_id = Number(req.body.switch_cabinet_id);
+  const start_unit = Number(req.body.start_unit);
+  const unit_size = Number(req.body.unit_size);
 
-  if (!Number.isInteger(equipment_id) || equipment_id <= 0 || !Number.isInteger(switch_cabinet_id) || switch_cabinet_id <= 0) {
-    return res.status(400).json({ error: 'equipment_id и switch_cabinet_id должны быть числами > 0' });
+  if (!Number.isInteger(equipment_id) || equipment_id <= 0) {
+    return res.status(400).json({ error: 'equipment_id должен быть числом > 0' });
+  }
+  if (!Number.isInteger(switch_cabinet_id) || switch_cabinet_id <= 0) {
+    return res.status(400).json({ error: 'switch_cabinet_id должен быть числом > 0' });
+  }
+  if (!Number.isInteger(start_unit) || start_unit <= 0) {
+    return res.status(400).json({ error: 'start_unit должен быть числом > 0' });
+  }
+  if (!Number.isInteger(unit_size) || unit_size <= 0) {
+    return res.status(400).json({ error: 'unit_size должен быть числом > 0' });
   }
 
   try {
@@ -964,13 +979,30 @@ export const placeInSwitchCabinet = async (req, res) => {
     const equipment = await getEquipmentRowById(equipment_id, ownerUserId);
     if (!equipment) return res.status(404).json({ error: 'Оборудование не найдено' });
 
+    const endUnit = start_unit + unit_size - 1;
+    const rackCapacity = Number(switchCabinet.unit_capacity ?? 42);
+    if (endUnit > rackCapacity) {
+      return res.status(400).json({ error: 'Оборудование выходит за пределы стойки' });
+    }
+
+    const conflict = await findPlacementConflict({
+      switch_cabinet_id,
+      ownerUserId,
+      equipment_id,
+      start_unit,
+      endUnit
+    });
+    if (conflict) {
+      return res.status(409).json({ error: 'Выбранные U-слоты уже заняты' });
+    }
+
     // текущие суммы в стойке (из helper: массив оборудования)
     const currentEnergy = (switchCabinet.equipment ?? []).reduce(
-      (sum, item) => sum + Number(item.energy_consumption ?? 0),
+      (sum, item) => (Number(item.id) === equipment_id ? sum : sum + Number(item.energy_consumption ?? 0)),
       0
     );
     const currentWeight = (switchCabinet.equipment ?? []).reduce(
-      (sum, item) => sum + Number(item.weight ?? 0),
+      (sum, item) => (Number(item.id) === equipment_id ? sum : sum + Number(item.weight ?? 0)),
       0
     );
 
@@ -996,8 +1028,10 @@ export const placeInSwitchCabinet = async (req, res) => {
     // размещаем
     const changes = await new Promise((resolve, reject) => {
       db.run(
-        `UPDATE assets SET switch_cabinet_id = ? WHERE id = ? AND owner_user_id = ?`,
-        [switch_cabinet_id, equipment_id, ownerUserId],
+        `UPDATE assets
+         SET switch_cabinet_id = ?, rack_start_unit = ?, rack_unit_size = ?
+         WHERE id = ? AND owner_user_id = ?`,
+        [switch_cabinet_id, start_unit, unit_size, equipment_id, ownerUserId],
         function (err) {
           if (err) return reject(err);
           resolve(this.changes);
@@ -1015,6 +1049,8 @@ export const placeInSwitchCabinet = async (req, res) => {
       message: warnings.length ? 'Оборудование размещено, но есть предупреждения' : 'Оборудование успешно размещено в стойке',
       equipment_id,
       switch_cabinet_id,
+      start_unit,
+      unit_size,
       warnings
     });
 
@@ -1027,7 +1063,8 @@ export const placeInSwitchCabinet = async (req, res) => {
 const getEquipmentRowById = async (equipment_id, ownerUserId) => {
   const equipment = await new Promise((resolve, reject) => {
     db.get(
-      `SELECT id, name, type, model, serial, status, weight, energy_consumption, switch_cabinet_id
+      `SELECT id, name, type, model, serial, status, weight, energy_consumption, switch_cabinet_id,
+              rack_start_unit, COALESCE(rack_unit_size, 1) AS rack_unit_size
        FROM assets
        WHERE id = ? AND owner_user_id = ?`,
       [equipment_id, ownerUserId],
@@ -1070,7 +1107,9 @@ const getSwitchCabinetById = async (switch_cabinet_id, ownerUserId) => {
 
   const equipment = await new Promise((resolve, reject) => {
     db.all(
-      `SELECT id, name, type, model, serial, status, weight, energy_consumption
+      `SELECT id, name, type, model, serial, status, weight, energy_consumption,
+              COALESCE(rack_unit_size, 1) AS unit_size,
+              rack_start_unit AS startUnit
        FROM assets
        WHERE switch_cabinet_id = ? AND owner_user_id = ?`,
       [switch_cabinet_id, ownerUserId],
@@ -1110,7 +1149,11 @@ export const removeFromSwitchCabinet = async (req, res) => {
 
     const changes = await new Promise((resolve, reject) => {
       db.run(
-        `UPDATE assets SET switch_cabinet_id = NULL WHERE id = ? AND owner_user_id = ?`,
+        `UPDATE assets
+         SET switch_cabinet_id = NULL,
+             rack_start_unit = NULL,
+             rack_unit_size = NULL
+         WHERE id = ? AND owner_user_id = ?`,
         [equipment_id, getOwnerUserId(req)],
         function (err) {
           if (err) return reject(err);
@@ -1130,6 +1173,26 @@ export const removeFromSwitchCabinet = async (req, res) => {
     logger.error(`Error: Failed to remove equipment from Switch Cabinet. Error: ${error.message}`);
     return res.status(500).json({ error: error.message });
   }
+};
+
+const findPlacementConflict = async ({ switch_cabinet_id, ownerUserId, equipment_id, start_unit, endUnit }) => {
+  const conflict = await new Promise((resolve, reject) => {
+    db.get(
+      `SELECT id
+       FROM assets
+       WHERE switch_cabinet_id = ?
+         AND owner_user_id = ?
+         AND id <> ?
+         AND rack_start_unit IS NOT NULL
+         AND rack_start_unit <= ?
+         AND (rack_start_unit + COALESCE(rack_unit_size, 1) - 1) >= ?
+       LIMIT 1`,
+      [switch_cabinet_id, ownerUserId, equipment_id, endUnit, start_unit],
+      (err, row) => (err ? reject(err) : resolve(row ?? null))
+    );
+  });
+
+  return conflict;
 };
 
 // Создание оборудования (assets + типовые таблицы) с транзакцией

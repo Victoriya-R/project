@@ -652,6 +652,22 @@ router.put('/switch_cabinets/:id', updateSwitchCabinet);  // Обновлени�
  *                   type: boolean
  *                 serial_number:
  *                   type: string
+ *                 unit_capacity:
+ *                   type: integer
+ *                   description: Количество U-слотов в стойке
+ *                 equipment:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       name:
+ *                         type: string
+ *                       unit_size:
+ *                         type: integer
+ *                       startUnit:
+ *                         type: integer
  *       404:
  *         description: Стойка не найдена
  */
@@ -764,11 +780,17 @@ router.delete('/switch_cabinets/:id', deleteSwitchCabinet);  // Удаление
  *                 type: integer
  *               switch_cabinet_id:
  *                 type: integer
+ *               start_unit:
+ *                 type: integer
+ *               unit_size:
+ *                 type: integer
  *     responses:
  *       200:
  *         description: Оборудование успешно размещено в стойке
  *       400:
  *         description: Некорректные данные
+ *       409:
+ *         description: Выбранные U-слоты уже заняты
  *       500:
  *         description: Ошибка при размещении оборудования
  */

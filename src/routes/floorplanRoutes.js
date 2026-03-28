@@ -5,6 +5,7 @@ import {
   updateFloorPlan,
   deleteFloorPlan,
   getFloorPlan3DView,
+  uploadFloorPlanBackground,
   createRack,
   updateRack,
   deleteRack,
@@ -12,6 +13,8 @@ import {
 } from '../controllers/floorplanController.js';
 
 const router = express.Router();
+
+router.post('/floorplan/upload-background', uploadFloorPlanBackground);
 
 /**
  * @swagger
@@ -22,7 +25,6 @@ const router = express.Router();
  *     summary: Создание нового плана помещения
 
  *     description: Создаёт план помещения для последующего 3D-отображения со стойками и оборудованием.
-(swagger)
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -79,7 +81,6 @@ const router = express.Router();
  *                 example: https://example.com/floor-a.png
  *               camera:
  *                 type: object
-<<<<<<< HEAD
  *                 description: Начальные параметры камеры 3D сцены
  *     responses:
  *       201:
@@ -354,10 +355,7 @@ router.delete('/rack/delete/:id', deleteRack);
  *     tags:
  *       - Floor Plan Racks
  *     summary: Получение 2D вида стойки
-<<<<<<< HEAD
  *     description: Возвращает данные выбранной стойки для детального 2D отображения юнитов и оборудования.
-=======
->>>>>>> 4c11647 (swagger)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -369,11 +367,8 @@ router.delete('/rack/delete/:id', deleteRack);
  *     responses:
  *       200:
  *         description: 2D вид стойки
-<<<<<<< HEAD
  *       404:
  *         description: Стойка не найдена
-=======
->>>>>>> 4c11647 (swagger)
  */
 router.get('/rack/:id/2d', getRack2DView);
 

@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import './utils/logger.js';
@@ -9,6 +11,8 @@ import floorplanRoutes from './routes/floorplanRoutes.js';
 import authenticateToken from './middlewares/authMiddleware.js';
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use((req, res, next) => {
   const allowedOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
@@ -25,6 +29,7 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 app.use('/users', userRoutes);
 app.use('/equipment', authenticateToken, equipmentRoutes);

@@ -18,6 +18,34 @@ type Props = {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+const getRackOccupiedUnits = (rack: FloorPlanRack): number => {
+  const unitCapacity = Math.max(1, rack.unit_capacity);
+  const occupiedUnitsMap = new Map<number, true>();
+  let fallbackCursor = unitCapacity;
+
+  rack.equipment.forEach((equipment) => {
+    const consumedUnits = Math.max(equipment.unit || 1, 1);
+    const hasExplicitStart = Number.isFinite(Number(equipment.startUnit));
+    const startUnit = hasExplicitStart
+      ? Math.max(1, Math.min(unitCapacity, Number(equipment.startUnit)))
+      : fallbackCursor;
+
+    for (let offset = 0; offset < consumedUnits; offset += 1) {
+      const unit = startUnit - offset;
+      if (unit < 1 || unit > unitCapacity) {
+        continue;
+      }
+      occupiedUnitsMap.set(unit, true);
+    }
+
+    if (!hasExplicitStart) {
+      fallbackCursor = Math.max(1, fallbackCursor - consumedUnits);
+    }
+  });
+
+  return occupiedUnitsMap.size;
+};
+
 export function FloorPlanScene({
   floorPlan,
   selectedRackId,
@@ -269,28 +297,7 @@ export function FloorPlanScene({
                     const rackDepthPx = Math.max(rackDepthM * meterToPixel, 36);
                     const rackHeightPx = Math.max(rackHeightM * meterToPixel, 130);
                     const unitCapacity = Math.max(rack.unit_capacity, 1);
-                    const occupiedUnitsMap = new Map<number, true>();
-                    let fallbackCursor = unitCapacity;
-                    rack.equipment.forEach((equipment) => {
-                      const consumedUnits = Math.max(equipment.unit || 1, 1);
-                      const hasExplicitStart = Number.isFinite(Number(equipment.startUnit));
-                      const startUnit = hasExplicitStart
-                        ? Math.max(1, Math.min(unitCapacity, Number(equipment.startUnit)))
-                        : fallbackCursor;
-
-                      for (let offset = 0; offset < consumedUnits; offset += 1) {
-                        const unit = startUnit - offset;
-                        if (unit < 1 || unit > unitCapacity) {
-                          continue;
-                        }
-                        occupiedUnitsMap.set(unit, true);
-                      }
-
-                      if (!hasExplicitStart) {
-                        fallbackCursor = Math.max(1, fallbackCursor - consumedUnits);
-                      }
-                    });
-                    const occupiedUnits = occupiedUnitsMap.size;
+                    const occupiedUnits = getRackOccupiedUnits(rack);
                     const rackCenterOnFloorX = (rack.x + rackWidthM / 2 - floorPlan.width / 2) * meterToPixel;
                     const rackCenterOnFloorZ = (rack.z + rackDepthM / 2 - floorPlan.depth / 2) * meterToPixel;
                     const rackHalfWidth = rackWidthPx / 2;
@@ -513,7 +520,7 @@ export function FloorPlanScene({
               <div className="mt-2 space-y-1 text-slate-700">
                 <p>Координаты: X={selectedRack.x.toFixed(2)}м, Y={selectedRack.z.toFixed(2)}м</p>
                 <p>Размер: {selectedRack.width}×{selectedRack.depth}×{selectedRack.height} м</p>
-                <p>U-слоты: {selectedRack.unit_capacity} / занято {selectedRack.equipment.length}</p>
+                <p>U-слоты: {selectedRack.unit_capacity} / занято {getRackOccupiedUnits(selectedRack)}</p>
               </div>
             </>
           ) : (
@@ -528,7 +535,7 @@ export function FloorPlanScene({
                 <li>Энергия: {hoveredRack.energy_consumption ?? 0} W / {hoveredRack.energy_limit ?? 0} W</li>
                 <li>Вес: {hoveredRack.weight ?? 0} kg</li>
                 <li>Зона: {hoveredRack.zone_name ?? floorPlan.zone_name ?? 'n/a'}</li>
-                <li>Оборудование: {hoveredRack.equipment_count ?? hoveredRack.equipment.length}</li>
+                <li>Оборудование: {hoveredRack.equipment.length}</li>
                 <li>Статус: {(hoveredRack.energy_limit && hoveredRack.energy_consumption && hoveredRack.energy_consumption > hoveredRack.energy_limit) ? 'warning' : 'active'}</li>
               </ul>
             </div>

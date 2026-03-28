@@ -1,5 +1,8 @@
 import db from '../utils/db.js';
 import logger from '../utils/logger.js';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const getOwnerUserId = (req) => Number(req.user?.userId);
 
@@ -47,6 +50,61 @@ const parseJsonSafe = (value, fallback) => {
     return fallback;
   }
 };
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.resolve(__dirname, '../../uploads/floorplans');
+
+const parseMultipartImage = async (req) => new Promise((resolve, reject) => {
+  const contentType = req.headers['content-type'] ?? '';
+  const boundaryMatch = contentType.match(/boundary=([^;]+)/i);
+  if (!boundaryMatch) {
+    reject(new Error('Не удалось прочитать boundary multipart/form-data'));
+    return;
+  }
+
+  const boundary = Buffer.from(`--${boundaryMatch[1]}`);
+  const chunks = [];
+
+  req.on('data', (chunk) => chunks.push(chunk));
+  req.on('error', reject);
+  req.on('end', () => {
+    const body = Buffer.concat(chunks);
+    const firstBoundaryIndex = body.indexOf(boundary);
+    if (firstBoundaryIndex < 0) {
+      reject(new Error('Multipart payload пустой или повреждён'));
+      return;
+    }
+
+    const headerEnd = body.indexOf(Buffer.from('\r\n\r\n'), firstBoundaryIndex);
+    if (headerEnd < 0) {
+      reject(new Error('Некорректный multipart header'));
+      return;
+    }
+
+    const headersRaw = body.slice(firstBoundaryIndex, headerEnd).toString('utf8');
+    const filenameMatch = headersRaw.match(/filename=\"([^\"]+)\"/i);
+    if (!filenameMatch) {
+      reject(new Error('Файл изображения не передан'));
+      return;
+    }
+
+    const mimeMatch = headersRaw.match(/Content-Type:\s*([^\r\n]+)/i);
+    const start = headerEnd + 4;
+    const endBoundaryMarker = Buffer.from(`\r\n--${boundaryMatch[1]}`);
+    const end = body.indexOf(endBoundaryMarker, start);
+    if (end < 0) {
+      reject(new Error('Некорректные границы multipart payload'));
+      return;
+    }
+
+    resolve({
+      buffer: body.slice(start, end),
+      filename: filenameMatch[1],
+      contentType: mimeMatch?.[1]?.trim() ?? 'application/octet-stream'
+    });
+  });
+});
 
 const toNumber = (value, fallback) => {
   if (value === undefined || value === null || value === '') {
@@ -150,6 +208,28 @@ const getFloorPlanWithRacks = async (id, ownerUserId) => {
     ...normalizeFloorPlan(floorPlanRow),
     racks: rackRows.map(normalizeRack)
   };
+};
+
+export const uploadFloorPlanBackground = async (req, res) => {
+  try {
+    const { buffer, filename, contentType } = await parseMultipartImage(req);
+    const allowedTypes = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif']);
+    if (!allowedTypes.has(contentType.toLowerCase())) {
+      return res.status(400).json({ error: 'Поддерживаются только изображения png, jpg, webp или gif' });
+    }
+
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const ext = path.extname(safeName) || '.png';
+    const uniqueName = `floorplan-${Date.now()}-${Math.random().toString(36).slice(2, 9)}${ext}`;
+
+    await fs.mkdir(uploadsDir, { recursive: true });
+    await fs.writeFile(path.join(uploadsDir, uniqueName), buffer);
+
+    return res.status(201).json({ url: `/uploads/floorplans/${uniqueName}` });
+  } catch (error) {
+    logger.error(`Error: Failed to upload floor plan background. Error: ${error.message}`);
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 export const createFloorPlan = async (req, res) => {

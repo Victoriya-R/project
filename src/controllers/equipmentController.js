@@ -866,6 +866,18 @@ export const getSwitchCabinet = async (req, res) => {
   }
 
   try {
+    const parseJsonSafe = (value, fallback) => {
+      if (!value) {
+        return fallback;
+      }
+
+      try {
+        return JSON.parse(value);
+      } catch {
+        return fallback;
+      }
+    };
+
     // 1) стойка
     const cabinet = await new Promise((resolve, reject) => {
       db.get('SELECT * FROM switch_cabinets WHERE id = ? AND owner_user_id = ?', [id, getOwnerUserId(req)], (err, row) => {
@@ -890,10 +902,88 @@ export const getSwitchCabinet = async (req, res) => {
       );
     });
 
+    // 2.1) пробуем восстановить U-позиции из последней floorplan-привязки этой стойки
+    const rackLayoutRow = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT equipment_json, unit_capacity
+         FROM floorplan_racks
+         WHERE switch_cabinet_id = ? AND owner_user_id = ? AND equipment_json IS NOT NULL
+         ORDER BY id DESC
+         LIMIT 1`,
+        [id, getOwnerUserId(req)],
+        (err, row) => {
+          if (err) return reject(err);
+          resolve(row ?? null);
+        }
+      );
+    });
+
+    const rackLayoutEquipment = Array.isArray(parseJsonSafe(rackLayoutRow?.equipment_json, []))
+      ? parseJsonSafe(rackLayoutRow?.equipment_json, [])
+      : [];
+
+    const equipmentById = new Map();
+    const equipmentByName = new Map();
+
+    rackLayoutEquipment.forEach((item) => {
+      if (!item || typeof item !== 'object') {
+        return;
+      }
+
+      const itemId = Number(item.id);
+      const itemName = String(item.name ?? '').trim().toLowerCase();
+
+      if (Number.isFinite(itemId)) {
+        equipmentById.set(itemId, item);
+      }
+
+      if (itemName) {
+        equipmentByName.set(itemName, item);
+      }
+    });
+
+    const equipmentWithPositions = (equipment ?? []).map((item) => {
+      const byId = equipmentById.get(Number(item.id));
+      const byName = equipmentByName.get(String(item.name ?? '').trim().toLowerCase());
+      const source = byId ?? byName ?? null;
+      const startUnit = Number(source?.startUnit ?? source?.start_unit ?? source?.u_position ?? source?.position_u);
+      const unit = Number(source?.unit ?? source?.size_u ?? source?.units);
+
+      return {
+        ...item,
+        unit: Number.isFinite(unit) && unit > 0 ? unit : 1,
+        startUnit: Number.isFinite(startUnit) ? startUnit : null
+      };
+    });
+
+    const unitCapacity = Number(rackLayoutRow?.unit_capacity ?? cabinet.unit_capacity ?? 42);
+    const slots = [];
+    equipmentWithPositions.forEach((item) => {
+      const startUnit = Number(item.startUnit);
+      const consumedUnits = Math.max(1, Number(item.unit) || 1);
+      if (!Number.isFinite(startUnit)) {
+        return;
+      }
+
+      for (let offset = 0; offset < consumedUnits; offset += 1) {
+        const unit = startUnit + offset;
+        if (unit < 1 || unit > unitCapacity) {
+          continue;
+        }
+
+        slots.push({
+          unit,
+          equipmentId: item.id
+        });
+      }
+    });
+
     // 3) ответ
     return res.status(200).json({
       ...cabinet,
-      equipment: equipment ?? [] // лучше [] чем null
+      unit_capacity: Number.isFinite(unitCapacity) && unitCapacity > 0 ? unitCapacity : 42,
+      equipment: equipmentWithPositions ?? [],
+      slots
     });
 
   } catch (error) {

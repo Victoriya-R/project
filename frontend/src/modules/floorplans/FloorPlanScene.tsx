@@ -74,9 +74,6 @@ export function FloorPlanScene({
   };
 
   const selectedRack = racks.find((rack) => rack.id === selectedRackId) ?? null;
-  const rackSlotPreviewLimit = 24;
-  const roomCenterX = roomPixelWidth / 2;
-  const roomCenterZ = roomPixelDepth / 2;
   const maxPanX = Math.max(0, roomPixelWidth * (zoom3d - 1) * 0.6 + 140);
   const maxPanY = Math.max(0, roomPixelDepth * (zoom3d - 1) * 0.6 + 140);
 
@@ -92,13 +89,15 @@ export function FloorPlanScene({
       return;
     }
 
-    const rackCenterOnFloorX = (selectedRack.x + selectedRack.width / 2) * meterToPixel - roomCenterX;
-    const rackCenterOnFloorZ = (selectedRack.z + selectedRack.depth / 2) * meterToPixel - roomCenterZ;
+    const rackWidth = selectedRack.width > 0 ? selectedRack.width : 0.6;
+    const rackDepth = selectedRack.depth > 0 ? selectedRack.depth : 1;
+    const rackCenterOnFloorX = (selectedRack.x + rackWidth / 2 - floorPlan.width / 2) * meterToPixel;
+    const rackCenterOnFloorZ = (selectedRack.z + rackDepth / 2 - floorPlan.depth / 2) * meterToPixel;
     setPan3d({
       x: clamp(-rackCenterOnFloorX * zoom3d * 0.45, -maxPanX, maxPanX),
       y: clamp(-rackCenterOnFloorZ * zoom3d * 0.45, -maxPanY, maxPanY)
     });
-  }, [selectedRackId, selectedRack, mode, meterToPixel, roomCenterX, roomCenterZ, zoom3d, maxPanX, maxPanY]);
+  }, [selectedRackId, selectedRack, mode, meterToPixel, floorPlan.width, floorPlan.depth, zoom3d, maxPanX, maxPanY]);
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
@@ -262,24 +261,58 @@ export function FloorPlanScene({
                   />
                   {racks.map((rack) => {
                     const isSelected = selectedRackId === rack.id;
-                    const rackWidthPx = Math.max(rack.width * meterToPixel, 16);
-                    const rackDepthPx = Math.max(rack.depth * meterToPixel, 26);
-                    const rackHeightPx = Math.max(rack.height * meterToPixel, 110);
+                    const rackWidthM = rack.width > 0 ? rack.width : 0.6;
+                    const rackDepthM = rack.depth > 0 ? rack.depth : 1;
+                    const rackHeightM = rack.height > 0 ? rack.height : 2.1;
+                    const rackWidthPx = Math.max(rackWidthM * meterToPixel, 24);
+                    const rackDepthPx = Math.max(rackDepthM * meterToPixel, 36);
+                    const rackHeightPx = Math.max(rackHeightM * meterToPixel, 130);
                     const unitCapacity = Math.max(rack.unit_capacity, 1);
-                    const visibleSlots = Math.min(unitCapacity, rackSlotPreviewLimit);
-                    const unitsPerSlot = Math.max(1, Math.ceil(unitCapacity / visibleSlots));
                     const occupiedUnits = rack.equipment.reduce((sum, equipment) => sum + Math.max(equipment.unit || 1, 1), 0);
-                    const occupancyRate = clamp(occupiedUnits / unitCapacity, 0, 1);
-                    const occupiedSlotCount = Math.round(visibleSlots * occupancyRate);
-                    const rackCenterOnFloorX = rack.x * meterToPixel + rackWidthPx / 2 - roomCenterX;
-                    const rackCenterOnFloorZ = rack.z * meterToPixel + rackDepthPx / 2 - roomCenterZ;
+                    const rackCenterOnFloorX = (rack.x + rackWidthM / 2 - floorPlan.width / 2) * meterToPixel;
+                    const rackCenterOnFloorZ = (rack.z + rackDepthM / 2 - floorPlan.depth / 2) * meterToPixel;
                     const rackHalfWidth = rackWidthPx / 2;
                     const rackHalfDepth = rackDepthPx / 2;
-                    const panelThickness = Math.max(4, Math.round(Math.min(rackWidthPx, rackDepthPx) * 0.07));
+                    const panelThickness = Math.max(4, Math.round(Math.min(rackWidthPx, rackDepthPx) * 0.08));
                     const railThickness = Math.max(2, Math.round(panelThickness * 0.35));
-                    const innerWidth = Math.max(rackWidthPx - panelThickness * 2, panelThickness * 2);
-                    const innerHeight = Math.max(rackHeightPx - panelThickness * 2, panelThickness * 3);
-                    const slotGap = Math.max(1, Math.round(innerHeight / visibleSlots));
+                    const innerWidth = Math.max(rackWidthPx - panelThickness * 2.4, panelThickness * 2);
+                    const innerHeight = Math.max(rackHeightPx - panelThickness * 2.4, panelThickness * 3);
+                    const unitHeight = innerHeight / unitCapacity;
+                    const frontZ = rackHalfDepth - panelThickness / 2;
+                    const backZ = -rackHalfDepth + panelThickness / 2;
+                    const leftX = -rackHalfWidth + panelThickness / 2;
+                    const rightX = rackHalfWidth - panelThickness / 2;
+                    const topY = -rackHeightPx + panelThickness / 2;
+                    const bottomY = -panelThickness / 2;
+                    const equipmentSegments: Array<{ key: string; start: number; units: number; label: string; real: boolean }> = [];
+                    let cursor = 0;
+
+                    rack.equipment.forEach((equipment, idx) => {
+                      const equipmentUnits = Math.max(equipment.unit || 1, 1);
+                      if (cursor >= unitCapacity) {
+                        return;
+                      }
+                      const clippedUnits = Math.min(equipmentUnits, unitCapacity - cursor);
+                      equipmentSegments.push({
+                        key: `${equipment.id}-${idx}`,
+                        start: cursor,
+                        units: clippedUnits,
+                        label: equipment.name,
+                        real: true
+                      });
+                      cursor += clippedUnits;
+                    });
+
+                    while (cursor < unitCapacity) {
+                      equipmentSegments.push({
+                        key: `empty-${cursor}`,
+                        start: cursor,
+                        units: 1,
+                        label: 'Empty slot',
+                        real: false
+                      });
+                      cursor += 1;
+                    }
 
                     return (
                       <button
@@ -300,36 +333,39 @@ export function FloorPlanScene({
                         }}
                       >
                         <span className="sr-only">{rack.name}</span>
+                        {/* rack root group, local origin is the cabinet center on floor */}
                         <div
-                          className="absolute border border-slate-500/40 bg-slate-900/20"
+                          className="absolute"
                           style={{
-                            width: rackWidthPx,
-                            height: rackDepthPx,
-                            transform: `translate3d(${-rackHalfWidth}px, ${-rackHalfDepth}px, 0px)`
-                          }}
-                        />
-
-                        <div
-                          className={`absolute border ${isSelected ? 'border-cyan-300/80' : 'border-slate-700/90'} bg-slate-950/95`}
-                          style={{
-                            width: rackWidthPx,
-                            height: rackHeightPx,
+                            width: 0,
+                            height: 0,
                             transformStyle: 'preserve-3d',
-                            transform: `translate3d(${-rackHalfWidth}px, ${-rackHeightPx}px, 0px)`
+                            transform: `translate3d(0px, 0px, 0px)`
                           }}
                         >
+                          <div
+                            className={`absolute border ${isSelected ? 'border-cyan-300/90' : 'border-slate-700/90'} bg-slate-950/95`}
+                            style={{
+                              width: rackWidthPx,
+                              height: rackHeightPx,
+                              transformStyle: 'preserve-3d',
+                              transform: `translate3d(${-rackHalfWidth}px, ${-rackHeightPx}px, 0px)`
+                            }}
+                          />
+
+                          {/* front frame / door */}
                           <div
                             className={`absolute border ${isSelected ? 'border-cyan-300/80' : 'border-slate-600'} bg-slate-900/95`}
                             style={{
                               width: rackWidthPx,
                               height: rackHeightPx,
-                              transform: `translate3d(0px, 0px, ${rackHalfDepth - panelThickness / 2}px)`
+                              transform: `translate3d(${-rackHalfWidth}px, ${-rackHeightPx}px, ${frontZ}px)`
                             }}
                           >
                             <div
                               className="absolute border border-slate-700/95 bg-slate-950/95"
                               style={{
-                                left: panelThickness,
+                                left: (rackWidthPx - innerWidth) / 2,
                                 top: panelThickness,
                                 width: innerWidth,
                                 height: innerHeight
@@ -353,64 +389,75 @@ export function FloorPlanScene({
                                   height: innerHeight
                                 }}
                               />
-                              {Array.from({ length: visibleSlots }).map((_, idx) => (
+                              {equipmentSegments.map((segment) => (
                                 <div
-                                  key={idx}
-                                  className="absolute left-0 right-0 border-t border-white/10"
+                                  key={segment.key}
+                                  className={`absolute left-1.5 right-1.5 border ${segment.real ? 'border-emerald-400/35 bg-emerald-500/30' : 'border-slate-500/35 bg-slate-700/20'}`}
                                   style={{
-                                    top: `${(idx / visibleSlots) * 100}%`,
-                                    height: `${100 / visibleSlots}%`,
-                                    backgroundColor:
-                                      idx >= visibleSlots - occupiedSlotCount ? 'rgba(16, 185, 129, 0.36)' : 'rgba(71, 85, 105, 0.3)'
+                                    bottom: segment.start * unitHeight,
+                                    height: segment.units * unitHeight
                                   }}
-                                />
+                                  title={segment.label}
+                                >
+                                  {segment.real ? (
+                                    <div className="absolute left-1 right-1 top-1/2 h-px -translate-y-1/2 bg-white/25" />
+                                  ) : null}
+                                </div>
                               ))}
-                              <div className="absolute inset-x-0 bottom-0 border-t border-white/10" style={{ height: slotGap }} />
                             </div>
                           </div>
 
+                          {/* back wall */}
                           <div
                             className="absolute border border-slate-700/90 bg-slate-900/95"
                             style={{
                               width: rackWidthPx,
                               height: rackHeightPx,
-                              transform: `translate3d(0px, 0px, ${-rackHalfDepth + panelThickness / 2}px)`
+                              transform: `translate3d(${-rackHalfWidth}px, ${-rackHeightPx}px, ${backZ}px)`
                             }}
                           />
+
+                          {/* left wall */}
                           <div
                             className="absolute border border-slate-700/90 bg-slate-800/95"
                             style={{
                               width: rackDepthPx,
                               height: rackHeightPx,
                               transformOrigin: 'left top',
-                              transform: `translate3d(${panelThickness / 2}px, 0px, ${rackHalfDepth}px) rotateY(-90deg)`
+                              transform: `translate3d(${leftX}px, ${-rackHeightPx}px, ${rackHalfDepth}px) rotateY(-90deg)`
                             }}
                           />
+
+                          {/* right wall */}
                           <div
                             className="absolute border border-slate-700/90 bg-slate-800/95"
                             style={{
                               width: rackDepthPx,
                               height: rackHeightPx,
                               transformOrigin: 'left top',
-                              transform: `translate3d(${rackWidthPx - panelThickness / 2}px, 0px, ${rackHalfDepth}px) rotateY(-90deg)`
+                              transform: `translate3d(${rightX}px, ${-rackHeightPx}px, ${rackHalfDepth}px) rotateY(-90deg)`
                             }}
                           />
+
+                          {/* top */}
                           <div
                             className="absolute border border-slate-700/90 bg-slate-900/95"
                             style={{
                               width: rackWidthPx,
                               height: rackDepthPx,
                               transformOrigin: 'left top',
-                              transform: `translate3d(0px, ${panelThickness / 2}px, ${rackHalfDepth}px) rotateX(-90deg)`
+                              transform: `translate3d(${-rackHalfWidth}px, ${topY}px, ${rackHalfDepth}px) rotateX(-90deg)`
                             }}
                           />
+
+                          {/* bottom */}
                           <div
                             className="absolute border border-slate-700/90 bg-slate-900/95"
                             style={{
                               width: rackWidthPx,
                               height: rackDepthPx,
                               transformOrigin: 'left top',
-                              transform: `translate3d(0px, ${rackHeightPx - panelThickness / 2}px, ${rackHalfDepth}px) rotateX(-90deg)`
+                              transform: `translate3d(${-rackHalfWidth}px, ${bottomY}px, ${rackHalfDepth}px) rotateX(-90deg)`
                             }}
                           />
                         </div>

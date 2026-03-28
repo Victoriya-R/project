@@ -146,7 +146,12 @@ export const equipmentApi = {
   create: async (payload: object) => api.post('/equipment', payload),
   update: async (id: number, payload: object) => api.put(`/equipment/${id}`, payload),
   remove: async (id: number) => api.delete(`/equipment/${id}`),
-  placeInCabinet: async (equipment_id: number, switch_cabinet_id: number) => api.put('/equipment/placeInSwitchCabinet', { equipment_id, switch_cabinet_id }),
+  placeInCabinet: async (
+    equipment_id: number,
+    switch_cabinet_id: number,
+    start_unit: number,
+    unit_size = 1
+  ) => api.put('/equipment/placeInSwitchCabinet', { equipment_id, switch_cabinet_id, start_unit, unit_size }),
   removeFromCabinet: async (equipment_id: number) => api.put('/equipment/removeFromSwitchCabinet', { equipment_id })
 };
 

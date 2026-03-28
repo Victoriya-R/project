@@ -28,6 +28,8 @@ export interface Equipment {
   weight?: number;
   energy_consumption?: number;
   switch_cabinet_id?: number | null;
+  unit_size?: number | null;
+  startUnit?: number | null;
 }
 
 export interface EquipmentDetails extends Equipment {

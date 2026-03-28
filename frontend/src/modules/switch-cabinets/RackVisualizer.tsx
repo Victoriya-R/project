@@ -76,6 +76,16 @@ export function RackVisualizer({ cabinet }: { cabinet: SwitchCabinet }) {
   const currentWeight = cabinet.equipment?.reduce((sum, item) => sum + Number(item.weight ?? 0), 0) ?? 0;
   const currentEnergy = cabinet.equipment?.reduce((sum, item) => sum + Number(item.energy_consumption ?? 0), 0) ?? 0;
   const unassignedEquipment = useMemo(() => (equipmentQuery.data?.data ?? []).filter((item) => !item.switch_cabinet_id), [equipmentQuery.data]);
+  const selectedEquipment = useMemo(
+    () => unassignedEquipment.find((item) => item.id === Number(selectedEquipmentId)),
+    [unassignedEquipment, selectedEquipmentId]
+  );
+
+  const parseStartUnit = (selectedSlot: number | null) => {
+    if (!selectedSlot) return null;
+    const parsed = Number(String(selectedSlot).replace(/^U/i, ''));
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  };
 
   const invalidate = async () => {
     await Promise.all([
@@ -87,7 +97,24 @@ export function RackVisualizer({ cabinet }: { cabinet: SwitchCabinet }) {
   };
 
   const placeMutation = useMutation({
-    mutationFn: () => equipmentApi.placeInCabinet(Number(selectedEquipmentId), cabinet.id),
+    mutationFn: () => {
+      const startUnit = parseStartUnit(selectedUnit);
+      if (!startUnit) {
+        throw new Error(t('cabinet.selectSlotPrompt'));
+      }
+      const unitSize = Number(
+        selectedEquipment?.unit_size
+        ?? (selectedEquipment as Equipment & { unit?: number } | undefined)?.unit
+        ?? 1
+      );
+
+      return equipmentApi.placeInCabinet(
+        Number(selectedEquipmentId),
+        cabinet.id,
+        startUnit,
+        Number.isFinite(unitSize) && unitSize > 0 ? unitSize : 1
+      );
+    },
     onSuccess: async () => {
       setPlacementError(null);
       setPlacementSuccess(t('cabinet.placeSuccess'));

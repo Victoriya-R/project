@@ -269,7 +269,28 @@ export function FloorPlanScene({
                     const rackDepthPx = Math.max(rackDepthM * meterToPixel, 36);
                     const rackHeightPx = Math.max(rackHeightM * meterToPixel, 130);
                     const unitCapacity = Math.max(rack.unit_capacity, 1);
-                    const occupiedUnits = rack.equipment.reduce((sum, equipment) => sum + Math.max(equipment.unit || 1, 1), 0);
+                    const occupiedUnitsMap = new Map<number, true>();
+                    let fallbackCursor = unitCapacity;
+                    rack.equipment.forEach((equipment) => {
+                      const consumedUnits = Math.max(equipment.unit || 1, 1);
+                      const hasExplicitStart = Number.isFinite(Number(equipment.startUnit));
+                      const startUnit = hasExplicitStart
+                        ? Math.max(1, Math.min(unitCapacity, Number(equipment.startUnit)))
+                        : fallbackCursor;
+
+                      for (let offset = 0; offset < consumedUnits; offset += 1) {
+                        const unit = startUnit - offset;
+                        if (unit < 1 || unit > unitCapacity) {
+                          continue;
+                        }
+                        occupiedUnitsMap.set(unit, true);
+                      }
+
+                      if (!hasExplicitStart) {
+                        fallbackCursor = Math.max(1, fallbackCursor - consumedUnits);
+                      }
+                    });
+                    const occupiedUnits = occupiedUnitsMap.size;
                     const rackCenterOnFloorX = (rack.x + rackWidthM / 2 - floorPlan.width / 2) * meterToPixel;
                     const rackCenterOnFloorZ = (rack.z + rackDepthM / 2 - floorPlan.depth / 2) * meterToPixel;
                     const rackHalfWidth = rackWidthPx / 2;
@@ -293,15 +314,21 @@ export function FloorPlanScene({
                       if (cursor >= unitCapacity) {
                         return;
                       }
-                      const clippedUnits = Math.min(equipmentUnits, unitCapacity - cursor);
+                      const hasExplicitStart = Number.isFinite(Number(equipment.startUnit));
+                      const startFromBottom = hasExplicitStart
+                        ? Math.max(0, Math.min(unitCapacity - 1, unitCapacity - Number(equipment.startUnit)))
+                        : cursor;
+                      const clippedUnits = Math.min(equipmentUnits, unitCapacity - startFromBottom);
                       equipmentSegments.push({
                         key: `${equipment.id}-${idx}`,
-                        start: cursor,
+                        start: startFromBottom,
                         units: clippedUnits,
                         label: equipment.name,
                         real: true
                       });
-                      cursor += clippedUnits;
+                      if (!hasExplicitStart) {
+                        cursor += clippedUnits;
+                      }
                     });
 
 

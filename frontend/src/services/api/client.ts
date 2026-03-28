@@ -236,12 +236,47 @@ const normalizeRackEquipment = (equipment: unknown): FloorPlanRack['equipment'] 
         name: String(source.name ?? source.device_name ?? source.title ?? source.label ?? `Оборудование ${index + 1}`),
         // `unit` in UI is used as consumed U-size for 3D/read-only occupancy math.
         unit: Math.max(1, toNumberOrNull(source.unit ?? source.size_u ?? source.units) ?? 1),
+        startUnit: toNumberOrNull(source.startUnit ?? source.start_unit ?? source.position_u ?? source.u_position),
         type: source.type ? String(source.type) : undefined,
         status: source.status ? String(source.status) as FloorPlanRack['equipment'][number]['status'] : undefined
       });
 
       return acc;
     }, []);
+};
+
+const normalizeEquipmentFromSourceRack = (sourceRack: Record<string, unknown> | null): FloorPlanRack['equipment'] => {
+  if (!sourceRack) {
+    return [];
+  }
+
+  const sourceEquipment = sourceRack.equipment ?? sourceRack.installed_equipment ?? sourceRack.devices ?? [];
+  if (!Array.isArray(sourceEquipment)) {
+    return [];
+  }
+
+  return sourceEquipment.reduce<FloorPlanRack['equipment']>((acc, item) => {
+    if (!item || typeof item !== 'object') {
+      return acc;
+    }
+
+    const sourceItem = item as Record<string, unknown>;
+    const normalizedId = toNumberOrNull(sourceItem.id ?? sourceItem.equipment_id);
+    if (normalizedId === null) {
+      return acc;
+    }
+
+    acc.push({
+      id: normalizedId,
+      name: String(sourceItem.name ?? sourceItem.device_name ?? sourceItem.title ?? 'Оборудование'),
+      unit: Math.max(1, toNumberOrNull(sourceItem.unit ?? sourceItem.size_u ?? sourceItem.units) ?? 1),
+      startUnit: toNumberOrNull(sourceItem.startUnit ?? sourceItem.start_unit ?? sourceItem.position_u ?? sourceItem.u_position),
+      type: sourceItem.type ? String(sourceItem.type) : undefined,
+      status: sourceItem.status ? String(sourceItem.status) as FloorPlanRack['equipment'][number]['status'] : undefined
+    });
+
+    return acc;
+  }, []);
 };
 
 const normalizeFloorPlanRack = (rack: unknown): FloorPlanRack | null => {
@@ -299,13 +334,65 @@ const normalizeFloorPlan = (floorPlan: FloorPlan): FloorPlan => ({
     .filter((rack): rack is FloorPlanRack => Boolean(rack))
 });
 
+const enrichFloorPlanWithLinkedCabinets = async (floorPlan: FloorPlan): Promise<FloorPlan> => {
+  const normalized = normalizeFloorPlan(floorPlan);
+  const racks = normalized.racks ?? [];
+
+  if (!racks.length) {
+    return normalized;
+  }
+
+  const linkedCabinetIds = Array.from(
+    new Set(
+      racks
+        .map((rack) => rack.switch_cabinet_id)
+        .filter((id): id is number => Number.isFinite(id ?? NaN))
+    )
+  );
+
+  if (!linkedCabinetIds.length) {
+    return normalized;
+  }
+
+  const cabinetDetails = await Promise.allSettled(
+    linkedCabinetIds.map(async (cabinetId) => {
+      const { data } = await api.get(`/equipment/switch_cabinets/${cabinetId}`);
+      return [cabinetId, data as Record<string, unknown>] as const;
+    })
+  );
+
+  const cabinetsMap = new Map<number, Record<string, unknown>>();
+  cabinetDetails.forEach((result) => {
+    if (result.status === 'fulfilled') {
+      cabinetsMap.set(result.value[0], result.value[1]);
+    }
+  });
+
+  const enrichedRacks = racks.map((rack) => {
+    const sourceRack = rack.switch_cabinet_id ? cabinetsMap.get(rack.switch_cabinet_id) ?? null : null;
+    const normalizedEquipment = normalizeEquipmentFromSourceRack(sourceRack);
+    const sourceCapacity = sourceRack ? toNumberOrNull(sourceRack.unit_capacity ?? sourceRack.units_capacity ?? sourceRack.capacity_u) : null;
+
+    return {
+      ...rack,
+      unit_capacity: Math.max(1, sourceCapacity ?? rack.unit_capacity ?? 42),
+      equipment: normalizedEquipment.length ? normalizedEquipment : rack.equipment
+    };
+  });
+
+  return {
+    ...normalized,
+    racks: enrichedRacks
+  };
+};
+
 
 export const floorplansApi = {
   list: () => withFallback<FloorPlan[]>('/api/floorplan', async () => (await api.get('/api/floorplan')).data, () => [], 'Floor plan list fallback uses empty collection.'),
   create: async (payload: Partial<FloorPlan>) => (await api.post('/api/floorplan/create', payload)).data,
   update: async (id: number, payload: Partial<FloorPlan>) => (await api.put(`/api/floorplan/update/${id}`, payload)).data,
   remove: async (id: number) => (await api.delete(`/api/floorplan/delete/${id}`)).data,
-  detail3d: (id: number) => withFallback<FloorPlan>(`/api/floorplan/${id}`, async () => normalizeFloorPlan((await api.get(`/api/floorplan/${id}`)).data), () => ({
+  detail3d: (id: number) => withFallback<FloorPlan>(`/api/floorplan/${id}`, async () => enrichFloorPlanWithLinkedCabinets((await api.get(`/api/floorplan/${id}`)).data), () => ({
     id,
     zone_id: 0,
     zone_name: 'N/A',

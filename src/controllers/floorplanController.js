@@ -411,6 +411,15 @@ export const createRack = async (req, res) => {
       if (cabinet.zone_id !== null && Number(cabinet.zone_id) !== Number(floorPlan.zone_id)) {
         return res.status(409).json({ error: 'Нельзя разместить стойку из другой зоны на этом плане' });
       }
+
+      const duplicateRack = await get(
+        `SELECT id FROM floorplan_racks
+         WHERE floorplan_id = ? AND switch_cabinet_id = ? AND owner_user_id = ?`,
+        [floorplan_id, switch_cabinet_id, ownerUserId]
+      );
+      if (duplicateRack) {
+        return res.status(409).json({ error: 'Эта стойка уже добавлена на данный план помещения' });
+      }
     }
 
     const result = await run(
@@ -486,7 +495,30 @@ export const updateRack = async (req, res) => {
   }
 
   try {
-    values.push(id, getOwnerUserId(req));
+    const ownerUserId = getOwnerUserId(req);
+    const existingRack = await get(
+      `SELECT id, floorplan_id, switch_cabinet_id
+       FROM floorplan_racks
+       WHERE id = ? AND owner_user_id = ?`,
+      [id, ownerUserId]
+    );
+
+    if (!existingRack) {
+      return res.status(404).json({ error: 'Стойка не найдена' });
+    }
+
+    if (switch_cabinet_id !== undefined && switch_cabinet_id !== null) {
+      const duplicateRack = await get(
+        `SELECT id FROM floorplan_racks
+         WHERE floorplan_id = ? AND switch_cabinet_id = ? AND owner_user_id = ? AND id <> ?`,
+        [existingRack.floorplan_id, Number(switch_cabinet_id), ownerUserId, id]
+      );
+      if (duplicateRack) {
+        return res.status(409).json({ error: 'Эта стойка уже добавлена на данный план помещения' });
+      }
+    }
+
+    values.push(id, ownerUserId);
     const result = await run(
       `UPDATE floorplan_racks
        SET ${fields.join(', ')}
@@ -507,7 +539,7 @@ export const updateRack = async (req, res) => {
        LEFT JOIN switch_cabinets sc ON sc.id = fr.switch_cabinet_id AND sc.owner_user_id = fr.owner_user_id
        LEFT JOIN zones z ON z.id = sc.zone_id AND z.owner_user_id = fr.owner_user_id
        WHERE fr.id = ? AND fr.owner_user_id = ?`,
-      [id, getOwnerUserId(req)]
+      [id, ownerUserId]
     );
 
     return res.status(200).json(normalizeRack(rackRow));

@@ -43,6 +43,8 @@ const createAssetsTable = async () => {
       serial TEXT NOT NULL,
       status TEXT NOT NULL,
       switch_cabinet_id INTEGER,
+      rack_start_unit INTEGER,
+      rack_unit_size INTEGER DEFAULT 1,
       weight INTEGER,
       energy_consumption INTEGER,
       owner_user_id INTEGER
@@ -78,6 +80,7 @@ const createSwitchCabinetsTable = async () => {
       description TEXT,
       isDataCenterEquipment INTEGER DEFAULT 1,
       serial_number TEXT NOT NULL,
+      unit_capacity INTEGER NOT NULL DEFAULT 42,
       owner_user_id INTEGER
     )
   `);
@@ -312,8 +315,11 @@ const ensureBaseSchema = async () => {
 
   await ensureColumn('users', 'is_superuser', 'INTEGER NOT NULL DEFAULT 0');
   await ensureColumn('assets', 'owner_user_id', 'INTEGER');
+  await ensureColumn('assets', 'rack_start_unit', 'INTEGER');
+  await ensureColumn('assets', 'rack_unit_size', 'INTEGER DEFAULT 1');
   await ensureColumn('zones', 'owner_user_id', 'INTEGER');
   await ensureColumn('switch_cabinets', 'owner_user_id', 'INTEGER');
+  await ensureColumn('switch_cabinets', 'unit_capacity', 'INTEGER NOT NULL DEFAULT 42');
   await ensureColumn('cables', 'owner_user_id', 'INTEGER');
   await ensureColumn('connections', 'owner_user_id', 'INTEGER');
   await ensureColumn('connections', 'status', `TEXT NOT NULL DEFAULT 'active'`);

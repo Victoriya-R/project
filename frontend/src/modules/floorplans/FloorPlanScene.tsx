@@ -89,8 +89,8 @@ export function FloorPlanScene({
       return;
     }
 
-    const rackWidth = 0.6;
-    const rackDepth = 1;
+   const rackWidth = selectedRack.width > 0 ? selectedRack.width : 0.6;
+   const rackDepth = selectedRack.depth > 0 ? selectedRack.depth : 1;
     const rackCenterOnFloorX = (selectedRack.x + rackWidth / 2 - floorPlan.width / 2) * meterToPixel;
     const rackCenterOnFloorZ = (selectedRack.z + rackDepth / 2 - floorPlan.depth / 2) * meterToPixel;
     setPan3d({
@@ -255,14 +255,15 @@ export function FloorPlanScene({
                     style={{
                       width: roomPixelWidth,
                       height: roomPixelDepth,
-                      transform: 'translate(-50%, -50%)',
+                      transform: 'translate3d(-50%, -50%, 0px)',
+                      transformStyle: 'preserve-3d',
                       boxShadow: '0 24px 80px rgba(15, 23, 42, 0.55)'
                     }}
                   />
                   {racks.map((rack) => {
                     const isSelected = selectedRackId === rack.id;
-                    const rackWidthM = 0.6;
-                    const rackDepthM = 1;
+                    const rackWidthM = rack.width > 0 ? rack.width : 0.6;
+                    const rackDepthM = rack.depth > 0 ? rack.depth : 1; 
                     const rackHeightM = clamp(rack.height > 0 ? rack.height : 2.1, 2, 2.2);
                     const rackWidthPx = Math.max(rackWidthM * meterToPixel, 24);
                     const rackDepthPx = Math.max(rackDepthM * meterToPixel, 36);
@@ -303,16 +304,6 @@ export function FloorPlanScene({
                       cursor += clippedUnits;
                     });
 
-                    while (cursor < unitCapacity) {
-                      equipmentSegments.push({
-                        key: `empty-${cursor}`,
-                        start: cursor,
-                        units: 1,
-                        label: 'Empty slot',
-                        real: false
-                      });
-                      cursor += 1;
-                    }
 
                     return (
                       <button
@@ -329,7 +320,7 @@ export function FloorPlanScene({
                           height: 0,
                           transformStyle: 'preserve-3d',
                           transformOrigin: 'center center',
-                          transform: `translate3d(${rackCenterOnFloorX}px, ${rackCenterOnFloorZ}px, 1px) rotateZ(${rack.rotation_y}deg)`
+                          transform: `translate3d(${rackCenterOnFloorX}px, ${rackCenterOnFloorZ}px, 2px) rotateZ(${rack.rotation_y}deg)`
                         }}
                       >
                         <span className="sr-only">{rack.name}</span>
@@ -340,7 +331,8 @@ export function FloorPlanScene({
                             width: 0,
                             height: 0,
                             transformStyle: 'preserve-3d',
-                            transform: `translate3d(0px, 0px, 0px)`
+                            transformOrigin: 'center center',
+                            transform: `rotateX(-90deg)`
                           }}
                         >
                           <div
@@ -362,6 +354,16 @@ export function FloorPlanScene({
                               transform: `translate3d(${-rackHalfWidth}px, ${-rackHeightPx}px, ${frontZ}px)`
                             }}
                           >
+                            <div
+                              className="pointer-events-none absolute left-1/2 rounded bg-slate-950/80 px-1.5 py-0.5 text-[9px] font-medium text-slate-200 whitespace-nowrap"
+                              style={{
+                                top: Math.max(4, panelThickness * 0.45),
+                                transform: 'translateX(-50%)',
+                                zIndex: 2
+                              }}
+                            >
+                              {rack.name} · {occupiedUnits}/{unitCapacity}U
+                            </div>
                             <div
                               className="absolute border border-slate-700/95 bg-slate-950/95"
                               style={{
@@ -392,7 +394,10 @@ export function FloorPlanScene({
                               {equipmentSegments.map((segment) => (
                                 <div
                                   key={segment.key}
-                                  className={`absolute left-1.5 right-1.5 border ${segment.real ? 'border-emerald-400/35 bg-emerald-500/30' : 'border-slate-500/35 bg-slate-700/20'}`}
+                                  className={`absolute left-1.5 right-1.5 overflow-hidden rounded-sm border ${segment.real
+                                      ? 'border-emerald-400/40 bg-emerald-500/30'
+                                      : 'border-slate-500/35 bg-slate-700/20'
+                                    }`}
                                   style={{
                                     bottom: segment.start * unitHeight,
                                     height: segment.units * unitHeight
@@ -400,7 +405,9 @@ export function FloorPlanScene({
                                   title={segment.label}
                                 >
                                   {segment.real ? (
-                                    <div className="absolute left-1 right-1 top-1/2 h-px -translate-y-1/2 bg-white/25" />
+                                    <div className="flex h-full items-center justify-center px-1 text-center text-[8px] font-medium text-white/90">
+                                      {segment.label}
+                                    </div>
                                   ) : null}
                                 </div>
                               ))}
@@ -424,7 +431,7 @@ export function FloorPlanScene({
                               width: rackDepthPx,
                               height: rackHeightPx,
                               transformOrigin: 'left top',
-                              transform: `translate3d(${leftX}px, ${-rackHeightPx}px, ${rackHalfDepth}px) rotateY(-90deg)`
+                              transform: `translate3d(${leftX}px, ${-rackHeightPx}px, ${rackHalfDepth}px) rotateY(90deg)`
                             }}
                           />
 
@@ -435,7 +442,7 @@ export function FloorPlanScene({
                               width: rackDepthPx,
                               height: rackHeightPx,
                               transformOrigin: 'left top',
-                              transform: `translate3d(${rightX}px, ${-rackHeightPx}px, ${rackHalfDepth}px) rotateY(-90deg)`
+                              transform: `translate3d(${rightX}px, ${-rackHeightPx}px, ${rackHalfDepth}px) rotateY(90deg)`
                             }}
                           />
 
@@ -462,14 +469,7 @@ export function FloorPlanScene({
                           />
                         </div>
 
-                        <div
-                          className="pointer-events-none absolute rounded bg-slate-950/75 px-1.5 py-0.5 text-[9px] font-medium text-slate-200"
-                          style={{
-                            transform: `translate3d(${-rackHalfWidth}px, ${-rackHeightPx - 16}px, ${rackDepthPx * 0.38}px)`
-                          }}
-                        >
-                          {rack.name} · {occupiedUnits}/{unitCapacity}U
-                        </div>
+                        
                       </button>
                     );
                   })}

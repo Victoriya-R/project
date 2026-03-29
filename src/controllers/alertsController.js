@@ -4,6 +4,14 @@ import logger from '../utils/logger.js';
 const ALERT_SEVERITIES = new Set(['info', 'warning', 'critical']);
 const ALERT_STATUSES = new Set(['new', 'acknowledged', 'resolved', 'muted']);
 const ALERT_SOURCE_TYPES = new Set(['rack', 'equipment', 'cable', 'connection', 'ups', 'zone']);
+const ALERT_STATUSES_ALLOWED_FOR_INCIDENT = new Set(['new', 'acknowledged']);
+const OPEN_INCIDENT_STATUSES = ['open', 'in_progress'];
+
+const ALERT_SEVERITY_TO_INCIDENT_PRIORITY = {
+  info: 'low',
+  warning: 'medium',
+  critical: 'high'
+};
 
 const getOwnerUserId = (req) => Number(req.user?.userId);
 
@@ -52,6 +60,21 @@ const normalizeAlert = (row) => ({
   status: row.status,
   rule_code: row.rule_code ?? null,
   owner_user_id: Number(row.owner_user_id),
+  created_at: row.created_at,
+  updated_at: row.updated_at,
+  resolved_at: row.resolved_at ?? null
+});
+
+const normalizeIncident = (row) => ({
+  id: Number(row.id),
+  title: row.title,
+  description: row.description ?? null,
+  priority: row.priority,
+  status: row.status,
+  alert_id: row.alert_id === null ? null : Number(row.alert_id),
+  assignee_user_id: row.assignee_user_id === null ? null : Number(row.assignee_user_id),
+  owner_user_id: Number(row.owner_user_id),
+  resolution_comment: row.resolution_comment ?? null,
   created_at: row.created_at,
   updated_at: row.updated_at,
   resolved_at: row.resolved_at ?? null
@@ -198,6 +221,92 @@ export const updateAlertStatus = async (id, status, ownerUserId) => {
   return getAlertById(id, ownerUserId);
 };
 
+export const findOpenIncidentByAlertId = async (alertId, ownerUserId) => get(
+  `SELECT id, title, description, priority, status, alert_id, assignee_user_id, owner_user_id, resolution_comment, created_at, updated_at, resolved_at
+   FROM incidents
+   WHERE alert_id = ? AND owner_user_id = ? AND status IN (?, ?)
+   ORDER BY created_at ASC
+   LIMIT 1`,
+  [alertId, ownerUserId, ...OPEN_INCIDENT_STATUSES]
+);
+
+const mapSeverityToPriority = (severity) => ALERT_SEVERITY_TO_INCIDENT_PRIORITY[severity] ?? 'low';
+
+export const createIncidentFromAlert = async (alertId, ownerUserId) => {
+  const alert = await getAlertById(alertId, ownerUserId);
+  if (!alert) {
+    return { error: { status: 404, payload: { error: 'Алерт не найден' } } };
+  }
+
+  if (!ALERT_STATUSES_ALLOWED_FOR_INCIDENT.has(alert.status)) {
+    return { error: { status: 400, payload: { error: `Нельзя создать инцидент из алерта в статусе ${alert.status}` } } };
+  }
+
+  const existingOpenIncident = await findOpenIncidentByAlertId(alertId, ownerUserId);
+  if (existingOpenIncident) {
+    return {
+      error: {
+        status: 409,
+        payload: {
+          error: 'По этому алерту уже существует открытый инцидент',
+          incident_id: Number(existingOpenIncident.id)
+        }
+      }
+    };
+  }
+
+  const timestamp = nowIso();
+  await run('BEGIN IMMEDIATE TRANSACTION');
+
+  try {
+    const insertResult = await run(
+      `INSERT INTO incidents (title, description, priority, status, alert_id, assignee_user_id, owner_user_id, resolution_comment, created_at, updated_at, resolved_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        alert.title,
+        alert.description ?? null,
+        mapSeverityToPriority(alert.severity),
+        'open',
+        alert.id,
+        null,
+        ownerUserId,
+        null,
+        timestamp,
+        timestamp,
+        null
+      ]
+    );
+
+    if (alert.status === 'new') {
+      await run(
+        `UPDATE alerts
+         SET status = ?, updated_at = ?
+         WHERE id = ? AND owner_user_id = ?`,
+        ['acknowledged', timestamp, alert.id, ownerUserId]
+      );
+    }
+
+    await run('COMMIT');
+
+    const createdIncident = await get(
+      `SELECT id, title, description, priority, status, alert_id, assignee_user_id, owner_user_id, resolution_comment, created_at, updated_at, resolved_at
+       FROM incidents
+       WHERE id = ? AND owner_user_id = ?`,
+      [insertResult.lastID, ownerUserId]
+    );
+
+    return { data: createdIncident };
+  } catch (error) {
+    try {
+      await run('ROLLBACK');
+    } catch (rollbackError) {
+      logger.error(`Error: Failed to rollback incident creation transaction for alert ${alertId}. Error: ${rollbackError.message}`);
+    }
+
+    throw error;
+  }
+};
+
 export const createAlertHandler = async (req, res) => {
   const validation = validateCreatePayload(req.body);
   if (validation.error) {
@@ -292,5 +401,25 @@ export const updateAlertStatusHandler = async (req, res) => {
   } catch (error) {
     logger.error(`Error: Failed to update alert status for id ${alertId}. Error: ${error.message}`);
     return res.status(500).json({ error: 'Не удалось обновить статус алерта' });
+  }
+};
+
+export const createIncidentFromAlertHandler = async (req, res) => {
+  const alertId = Number(req.params.id);
+  if (!Number.isInteger(alertId) || alertId <= 0) {
+    return res.status(400).json({ error: 'Некорректный id алерта' });
+  }
+
+  try {
+    const result = await createIncidentFromAlert(alertId, getOwnerUserId(req));
+
+    if (result.error) {
+      return res.status(result.error.status).json(result.error.payload);
+    }
+
+    return res.status(201).json(normalizeIncident(result.data));
+  } catch (error) {
+    logger.error(`Error: Failed to create incident from alert id ${alertId}. Error: ${error.message}`);
+    return res.status(500).json({ error: 'Не удалось создать инцидент из алерта' });
   }
 };

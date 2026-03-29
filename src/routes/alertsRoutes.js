@@ -1,5 +1,6 @@
 import express from 'express';
 import {
+  createIncidentFromAlertHandler,
   createAlertHandler,
   getAlertByIdHandler,
   listAlertsHandler,
@@ -12,5 +13,6 @@ router.post('/', createAlertHandler);
 router.get('/', listAlertsHandler);
 router.get('/:id', getAlertByIdHandler);
 router.patch('/:id/status', updateAlertStatusHandler);
+router.post('/:id/create-incident', createIncidentFromAlertHandler);
 
 export default router;

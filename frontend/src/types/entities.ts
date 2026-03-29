@@ -224,6 +224,26 @@ export interface ZoneLoadReportRow {
   overloaded_by_energy_cabinets: number;
 }
 
+
+export type AlertSeverity = 'info' | 'warning' | 'critical';
+export type AlertStatus = 'new' | 'acknowledged' | 'resolved' | 'muted';
+export type AlertSourceType = 'rack' | 'equipment' | 'cable' | 'connection' | 'ups' | 'zone';
+
+export interface Alert {
+  id: number;
+  title: string;
+  description: string | null;
+  severity: AlertSeverity;
+  source_type: AlertSourceType;
+  source_id: number;
+  status: AlertStatus;
+  rule_code: string | null;
+  owner_user_id: number;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+}
+
 export interface ApiMeta {
   usingMock: boolean;
   reason?: string;

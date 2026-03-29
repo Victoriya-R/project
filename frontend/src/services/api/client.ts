@@ -17,7 +17,11 @@ import {
   ZoneLoadReportRow,
   ZoneReportRow,
   FloorPlan,
-  FloorPlanRack
+  FloorPlanRack,
+  Alert,
+  AlertStatus,
+  AlertSeverity,
+  AlertSourceType
 } from '../../types/entities';
 import {
   mockCables,
@@ -206,6 +210,25 @@ export const connectionsApi = {
   update: async (id: number, payload: Partial<Connection>) => api.put(`/equipment/connections/${id}`, payload),
   remove: async (id: number) => api.delete(`/equipment/connections/${id}`),
   compatibilityPorts: async (equipmentId: number, isUps = false) => (isUps ? upsApi.ports(equipmentId) : equipmentApi.ports(equipmentId))
+};
+
+
+export const alertsApi = {
+  list: async (params?: { severity?: AlertSeverity; status?: AlertStatus; source_type?: AlertSourceType }) => {
+    const query = Object.fromEntries(
+      Object.entries(params ?? {}).filter(([, value]) => value !== undefined && value !== null)
+    );
+
+    return withFallback<Alert[]>(
+      '/alerts',
+      async () => (await api.get('/alerts', { params: query })).data,
+      () => [],
+      'Alerts endpoint fallback returns empty list when API is unavailable.'
+    );
+  },
+  getById: async (id: number) => (await api.get<Alert>(`/alerts/${id}`)).data,
+  updateStatus: async (id: number, status: AlertStatus) => (await api.patch<Alert>(`/alerts/${id}/status`, { status })).data,
+  createIncident: async (id: number) => (await api.post(`/alerts/${id}/create-incident`)).data
 };
 
 export const reportsApi = {

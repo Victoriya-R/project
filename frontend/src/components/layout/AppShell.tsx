@@ -1,5 +1,5 @@
 import { PropsWithChildren, useMemo } from 'react';
-import { Activity, Cable, ChartColumn, Cpu, LayoutDashboard, LockKeyhole, LogOut, Map, ShieldCheck, SquareStack, Unplug, Boxes } from 'lucide-react';
+import { Activity, BellRing, Cable, ChartColumn, Cpu, LayoutDashboard, LockKeyhole, LogOut, Map, ShieldCheck, SquareStack, Unplug, Boxes } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth-store';
 import { useI18n } from '../../i18n/provider';
@@ -22,6 +22,7 @@ export function AppShell({ children }: PropsWithChildren) {
     { to: '/switch-cabinets', label: t('nav.switchCabinets'), icon: SquareStack },
     { to: '/zones', label: t('nav.zones'), icon: Map },
     { to: '/connections', label: t('nav.connections'), icon: Activity },
+    { to: '/alerts', label: 'Алерты', icon: BellRing },
     { to: '/cables', label: t('nav.cables'), icon: Cable },
     { to: '/reports', label: t('nav.reports'), icon: ChartColumn },
     { to: '/floorplans', label: '3D планы', icon: Boxes },

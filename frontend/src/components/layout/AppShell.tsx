@@ -32,8 +32,19 @@ export function AppShell({ children }: PropsWithChildren) {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
         <aside className="border-r border-slate-200 bg-white px-5 py-6">
-          <Link to="/" aria-label="Dashboard" className="flex items-center rounded-2xl bg-slate-950 px-4 py-4 text-white shadow-soft">
-            <div className="rounded-xl bg-white/10 p-2"><Unplug className="h-5 w-5" /></div>
+          <Link
+            to="/"
+            aria-label="Dashboard"
+            className="flex items-center gap-3 rounded-2xl bg-slate-950 px-4 py-4 text-white shadow-soft"
+          >
+            <div className="rounded-xl bg-white/10 p-2">
+              <Unplug className="h-5 w-5" />
+            </div>
+
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">Data Center</p>
+              <p className="truncate text-[11px] text-slate-400">Corporate workspace</p>
+            </div>
           </Link>
           <nav className="mt-8 space-y-1">
             {navItems.map(({ to, label, icon: Icon, disabled }) => disabled ? (
@@ -56,9 +67,14 @@ export function AppShell({ children }: PropsWithChildren) {
                 <p className="text-sm font-medium text-slate-500">{t('app.enterpriseWorkspace')}</p>
                 <div className="mt-1 flex items-center gap-3">
                   <BrandLogo iconClassName="h-10 w-10" />
-                  <h2 className="text-xl font-semibold">Data Center</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-semibold">Data Center</h2>
+                    <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-500">
+                      Сборка v1.4.2
+                    </span>
+                  </div>
                 </div>
-              </div>
+                </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <LanguageSwitcher />
 

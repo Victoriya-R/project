@@ -163,7 +163,7 @@ export function FloorPlanScene({
           ) : (
             <>
               <label className="flex items-center gap-2">Zoom
-                <input type="range" min={0.75} max={1.55} step={0.05} value={zoom3d} onChange={(event) => setZoom3d(Number(event.target.value))} />
+                <input type="range" min={0.75} max={3.55} step={0.05} value={zoom3d} onChange={(event) => setZoom3d(Number(event.target.value))} />
               </label>
               <label className="flex items-center gap-2">Rotate
                 <input type="range" min={-70} max={70} step={1} value={rotation3d} onChange={(event) => setRotation3d(Number(event.target.value))} />
@@ -312,8 +312,8 @@ export function FloorPlanScene({
                     const rackHalfWidth = rackWidthPx / 2;
                     const rackHalfDepth = rackDepthPx / 2;
                     const panelThickness = Math.max(4, Math.round(Math.min(rackWidthPx, rackDepthPx) * 0.08));
-                    const railThickness = Math.max(2, Math.round(panelThickness * 0.35));
-                    const innerWidth = Math.max(rackWidthPx - panelThickness * 2.4, panelThickness * 2);
+                    const railThickness = Math.max(1, Math.round(panelThickness * 0.22));
+                    const innerWidth = Math.max(rackWidthPx - panelThickness * 1, panelThickness * 2.4);
                     const innerHeight = Math.max(rackHeightPx - panelThickness * 2.4, panelThickness * 3);
                     const unitHeight = innerHeight / unitCapacity;
                     const frontZ = rackHalfDepth;
@@ -443,33 +443,52 @@ export function FloorPlanScene({
                                 }}
                               />
                               {equipmentSegments.map((segment) => {
-                                const actualHeight = segment.units * unitHeight
-                                const visualHeight = segment.real ? Math.max(actualHeight, 10) : actualHeight
-                                const rawBottom = segment.start * unitHeight
-                                const visualBottom = clamp(rawBottom - (visualHeight - actualHeight) / 2, 0, innerHeight - visualHeight)
+                                const rawHeight = segment.units * unitHeight
+                                const isSingleUnit = segment.units === 1
+
+                                const markerHeight = 6
+                                const multiUnitGap = 2
+
+                                const visualHeight = segment.real
+                                  ? isSingleUnit
+                                    ? Math.min(markerHeight, Math.max(rawHeight - 3, 4))
+                                    : Math.max(rawHeight - multiUnitGap, 8)
+                                  : rawHeight
+
+                                const visualBottom = isSingleUnit
+                                  ? segment.start * unitHeight + (rawHeight - visualHeight) / 2
+                                  : segment.start * unitHeight + multiUnitGap / 2
+
+                                const canShowTinyLabel = zoom3d >= 1.8
 
                                 return (
                                   <div
                                     key={segment.key}
-                                    className={`absolute left-1.5 right-1.5 overflow-hidden rounded-sm border ${segment.real
-                                        ? 'border-emerald-300/80 bg-emerald-400/60'
-                                        : 'border-slate-500/35 bg-slate-700/20'
-                                      }`}
+                                    className="absolute left-[4px] right-[4px] overflow-visible"
                                     style={{
                                       bottom: visualBottom,
-                                      height: visualHeight,
-                                      boxShadow: segment.real ? '0 0 10px rgba(74, 222, 128, 0.35)' : undefined
+                                      height: visualHeight
                                     }}
                                     title={segment.label}
                                   >
-                                    {segment.real ? (
-                                      visualHeight >= 16 ? (
-                                        <div className="flex h-full items-center justify-center px-1 text-center text-[8px] font-semibold text-slate-950">
-                                          {segment.label}
-                                        </div>
-                                      ) : (
-                                        <div className="absolute inset-x-0 top-1/2 h-[2px] -translate-y-1/2 bg-white/80" />
-                                      )
+                                    <div
+                                      className={`absolute inset-0 overflow-hidden rounded-[1px] border ${segment.real
+                                          ? 'border-emerald-300/80 bg-emerald-400/45'
+                                          : 'border-slate-500/35 bg-slate-700/20'
+                                        }`}
+                                      style={{
+                                        boxShadow: segment.real ? '0 0 3px rgba(74, 222, 128, 0.12)' : undefined
+                                      }}
+                                    >
+                                      {segment.real && !isSingleUnit ? (
+                                        <div className="absolute inset-x-0 top-1/2 h-[2px] -translate-y-1/2 bg-white/70" />
+                                      ) : null}
+                                    </div>
+
+                                    {segment.real && isSingleUnit && canShowTinyLabel ? (
+                                      <div className="absolute left-full ml-1 top-1/2 -translate-y-1/2 whitespace-nowrap text-[5px] font-medium text-emerald-200">
+                                        {segment.label}
+                                      </div>
                                     ) : null}
                                   </div>
                                 )

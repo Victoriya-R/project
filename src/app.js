@@ -9,6 +9,7 @@ import userRoutes from './routes/userRoutes.js';
 import equipmentRoutes from './routes/equipmentRoutes.js';
 import floorplanRoutes from './routes/floorplanRoutes.js';
 import alertsRoutes from './routes/alertsRoutes.js';
+import incidentsRoutes from './routes/incidentsRoutes.js';
 import authenticateToken from './middlewares/authMiddleware.js';
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/users', userRoutes);
 app.use('/equipment', authenticateToken, equipmentRoutes);
 app.use('/api', authenticateToken, floorplanRoutes);
 app.use('/alerts', authenticateToken, alertsRoutes);
+app.use('/incidents', authenticateToken, incidentsRoutes);
 
 const swaggerOptions = {
   definition: {

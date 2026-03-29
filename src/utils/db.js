@@ -212,6 +212,28 @@ const createAlertsTable = async () => {
   `);
 };
 
+const createIncidentsTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS incidents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      priority TEXT NOT NULL CHECK(priority IN ('low', 'medium', 'high', 'critical')),
+      status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'in_progress', 'resolved', 'closed')),
+      alert_id INTEGER,
+      assignee_user_id INTEGER,
+      owner_user_id INTEGER NOT NULL,
+      resolution_comment TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      resolved_at TEXT,
+      FOREIGN KEY(alert_id) REFERENCES alerts(id) ON DELETE SET NULL,
+      FOREIGN KEY(assignee_user_id) REFERENCES users(id) ON DELETE SET NULL,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+};
+
 const rebuildPortsTableIfNeeded = async () => {
   const columns = await all(`PRAGMA table_info(ports)`);
   const hasPrimaryKey = columns.some((column) => column.name === 'id' && Number(column.pk) === 1);
@@ -339,6 +361,7 @@ const ensureBaseSchema = async () => {
   await createFloorPlansTable();
   await createFloorPlanRacksTable();
   await createAlertsTable();
+  await createIncidentsTable();
   await rebuildPortsTableIfNeeded();
 
   await ensureColumn('users', 'is_superuser', 'INTEGER NOT NULL DEFAULT 0');
@@ -367,6 +390,11 @@ const ensureBaseSchema = async () => {
   await createIndexIfMissing('alerts_severity_idx', 'alerts', 'severity');
   await createIndexIfMissing('alerts_source_type_idx', 'alerts', 'source_type');
   await createIndexIfMissing('alerts_source_id_idx', 'alerts', 'source_id');
+  await createIndexIfMissing('incidents_owner_user_id_idx', 'incidents', 'owner_user_id');
+  await createIndexIfMissing('incidents_status_idx', 'incidents', 'status');
+  await createIndexIfMissing('incidents_priority_idx', 'incidents', 'priority');
+  await createIndexIfMissing('incidents_alert_id_idx', 'incidents', 'alert_id');
+  await createIndexIfMissing('incidents_assignee_user_id_idx', 'incidents', 'assignee_user_id');
 };
 
 const ensureSeedData = async () => {

@@ -35,7 +35,7 @@ app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 app.use('/users', userRoutes);
 app.use('/equipment', authenticateToken, equipmentRoutes);
 app.use('/api', authenticateToken, floorplanRoutes);
-app.use('/', authenticateToken, alertsRoutes);
+app.use('/alerts', authenticateToken, alertsRoutes);
 
 const swaggerOptions = {
   definition: {

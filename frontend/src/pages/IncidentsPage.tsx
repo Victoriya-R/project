@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { Button } from '../components/common/Button';
@@ -55,10 +56,29 @@ const toNumberOrUndefined = (value: string): number | undefined => {
   return Number.isFinite(numeric) ? numeric : undefined;
 };
 
+const parseIncidentStatuses = (value: string | null): IncidentStatus[] => {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item): item is IncidentStatus => ['open', 'in_progress', 'resolved', 'closed'].includes(item));
+};
+
 export function IncidentsPage() {
   const queryClient = useQueryClient();
-  const [priority, setPriority] = useState<'' | IncidentPriority>('');
-  const [status, setStatus] = useState<'' | IncidentStatus>('');
+  const [searchParams] = useSearchParams();
+  const priorityParam = searchParams.get('priority');
+  const statusParam = searchParams.get('status');
+
+  const initialPriority = priorityParam === 'low' || priorityParam === 'medium' || priorityParam === 'high' || priorityParam === 'critical' ? priorityParam : '';
+  const initialStatus: '' | IncidentStatus = statusParam === 'in_progress' ? 'in_progress' : statusParam === 'open' || statusParam === 'resolved' || statusParam === 'closed' ? statusParam : '';
+  const statusListFromUrl = useMemo(() => parseIncidentStatuses(statusParam), [statusParam]);
+
+  const [priority, setPriority] = useState<'' | IncidentPriority>(initialPriority);
+  const [status, setStatus] = useState<'' | IncidentStatus>(initialStatus);
   const [assigneeUserId, setAssigneeUserId] = useState('');
   const [alertId, setAlertId] = useState('');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
@@ -135,7 +155,15 @@ export function IncidentsPage() {
     }
   });
 
-  const incidents = incidentsQuery.data?.data ?? [];
+  const incidents = useMemo(() => {
+    const base = incidentsQuery.data?.data ?? [];
+
+    if (status || statusListFromUrl.length <= 1) {
+      return base;
+    }
+
+    return base.filter((incident) => statusListFromUrl.includes(incident.status));
+  }, [incidentsQuery.data?.data, status, statusListFromUrl]);
   const users = usersQuery.data ?? [];
 
   const getAssigneeLabel = (incident: Pick<Incident, 'assignee_user_id'>) => {

@@ -9,6 +9,7 @@ import { InfoCard } from '../components/common/InfoCard';
 import { LoadingState } from '../components/common/LoadingState';
 import { MockBanner } from '../components/common/MockBanner';
 import { PageHeader } from '../components/common/PageHeader';
+import { AlertsIncidentsWidget } from '../modules/dashboard/AlertsIncidentsWidget';
 import { RecentActivityFeed } from '../modules/dashboard/RecentActivityFeed';
 
 export function DashboardPage() {
@@ -39,6 +40,7 @@ export function DashboardPage() {
       </section>
       <section className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <div className="space-y-6">
+          <AlertsIncidentsWidget />
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
             <div className="flex items-center justify-between gap-3">
               <div>

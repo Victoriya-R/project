@@ -193,6 +193,25 @@ const createConnectionsTable = async () => {
   `);
 };
 
+const createAlertsTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      severity TEXT NOT NULL CHECK(severity IN ('info', 'warning', 'critical')),
+      source_type TEXT NOT NULL CHECK(source_type IN ('rack', 'equipment', 'cable', 'connection', 'ups', 'zone')),
+      source_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new', 'acknowledged', 'resolved', 'muted')),
+      rule_code TEXT,
+      owner_user_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      resolved_at TEXT
+    )
+  `);
+};
+
 const rebuildPortsTableIfNeeded = async () => {
   const columns = await all(`PRAGMA table_info(ports)`);
   const hasPrimaryKey = columns.some((column) => column.name === 'id' && Number(column.pk) === 1);
@@ -234,6 +253,14 @@ const createUniqueIndexIfMissing = async (indexName, tableName, columns) => {
 
   if (!existing) {
     await run(`CREATE UNIQUE INDEX ${indexName} ON ${tableName} (${columns})`);
+  }
+};
+
+const createIndexIfMissing = async (indexName, tableName, columns) => {
+  const existing = await get(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?`, [indexName]);
+
+  if (!existing) {
+    await run(`CREATE INDEX ${indexName} ON ${tableName} (${columns})`);
   }
 };
 
@@ -311,6 +338,7 @@ const ensureBaseSchema = async () => {
   await createConnectionsTable();
   await createFloorPlansTable();
   await createFloorPlanRacksTable();
+  await createAlertsTable();
   await rebuildPortsTableIfNeeded();
 
   await ensureColumn('users', 'is_superuser', 'INTEGER NOT NULL DEFAULT 0');
@@ -334,6 +362,11 @@ const ensureBaseSchema = async () => {
   await createUniqueIndexIfMissing('users_username_unique_idx', 'users', 'username');
   await createUniqueIndexIfMissing('users_email_unique_idx', 'users', 'email');
   await createUniqueIndexIfMissing('floorplans_zone_owner_unique_idx', 'floorplans', 'zone_id, owner_user_id');
+  await createIndexIfMissing('alerts_owner_user_id_idx', 'alerts', 'owner_user_id');
+  await createIndexIfMissing('alerts_status_idx', 'alerts', 'status');
+  await createIndexIfMissing('alerts_severity_idx', 'alerts', 'severity');
+  await createIndexIfMissing('alerts_source_type_idx', 'alerts', 'source_type');
+  await createIndexIfMissing('alerts_source_id_idx', 'alerts', 'source_id');
 };
 
 const ensureSeedData = async () => {

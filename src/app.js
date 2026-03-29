@@ -8,6 +8,7 @@ import './utils/db.js';
 import userRoutes from './routes/userRoutes.js';
 import equipmentRoutes from './routes/equipmentRoutes.js';
 import floorplanRoutes from './routes/floorplanRoutes.js';
+import alertsRoutes from './routes/alertsRoutes.js';
 import authenticateToken from './middlewares/authMiddleware.js';
 
 const app = express();
@@ -34,6 +35,7 @@ app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 app.use('/users', userRoutes);
 app.use('/equipment', authenticateToken, equipmentRoutes);
 app.use('/api', authenticateToken, floorplanRoutes);
+app.use('/', authenticateToken, alertsRoutes);
 
 const swaggerOptions = {
   definition: {

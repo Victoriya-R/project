@@ -63,7 +63,7 @@ export function AlertsIncidentsWidget() {
         </Link>
 
         <Link
-          to="/alerts?severity=critical"
+          to="/alerts?severity=critical&status_exclude=resolved"
           className={`rounded-2xl border px-4 py-3 transition hover:shadow-soft ${counterTone.criticalAlerts}`}
         >
           <p className="text-xs font-medium uppercase tracking-wide">{t('dashboard.criticalAlerts')}</p>
@@ -71,7 +71,7 @@ export function AlertsIncidentsWidget() {
         </Link>
 
         <Link
-          to="/incidents?status=open"
+          to="/incidents?status=open,in_progress"
           className={`rounded-2xl border px-4 py-3 transition hover:shadow-soft ${counterTone.openIncidents}`}
         >
           <p className="text-xs font-medium uppercase tracking-wide">{t('dashboard.openIncidents')}</p>

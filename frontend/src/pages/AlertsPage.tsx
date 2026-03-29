@@ -55,12 +55,24 @@ const AlertStatusBadge = ({ status }: { status: AlertStatus }) => (
   <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset', statusBadgeMap[status])}>{status}</span>
 );
 
+const parseAlertStatuses = (value: string | null): AlertStatus[] => {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item): item is AlertStatus => ['new', 'acknowledged', 'resolved', 'muted'].includes(item));
+};
+
 export function AlertsPage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const severityParam = searchParams.get('severity');
   const statusParam = searchParams.get('status');
   const sourceTypeParam = searchParams.get('source_type');
+  const statusExcludeParam = searchParams.get('status_exclude');
 
   const initialSeverity = severityParam === 'info' || severityParam === 'warning' || severityParam === 'critical' ? severityParam : '';
   const initialStatus = statusParam === 'new' || statusParam === 'acknowledged' || statusParam === 'resolved' || statusParam === 'muted' ? statusParam : '';
@@ -131,7 +143,16 @@ export function AlertsPage() {
     }
   });
 
-  const alerts = query.data?.data ?? [];
+  const excludedStatuses = useMemo(() => parseAlertStatuses(statusExcludeParam), [statusExcludeParam]);
+  const alerts = useMemo(() => {
+    const base = query.data?.data ?? [];
+
+    if (excludedStatuses.length === 0) {
+      return base;
+    }
+
+    return base.filter((alert) => !excludedStatuses.includes(alert.status));
+  }, [excludedStatuses, query.data?.data]);
 
   const renderActions = (alert: Alert) => {
     if (alert.status === 'muted') {

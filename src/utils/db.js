@@ -390,6 +390,7 @@ const ensureBaseSchema = async () => {
   await createIndexIfMissing('alerts_severity_idx', 'alerts', 'severity');
   await createIndexIfMissing('alerts_source_type_idx', 'alerts', 'source_type');
   await createIndexIfMissing('alerts_source_id_idx', 'alerts', 'source_id');
+  await createIndexIfMissing('alerts_owner_source_rule_status_idx', 'alerts', 'owner_user_id, source_type, source_id, rule_code, status');
   await createIndexIfMissing('incidents_owner_user_id_idx', 'incidents', 'owner_user_id');
   await createIndexIfMissing('incidents_status_idx', 'incidents', 'status');
   await createIndexIfMissing('incidents_priority_idx', 'incidents', 'priority');

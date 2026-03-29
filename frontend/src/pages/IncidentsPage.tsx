@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { Button } from '../components/common/Button';
@@ -57,8 +58,15 @@ const toNumberOrUndefined = (value: string): number | undefined => {
 
 export function IncidentsPage() {
   const queryClient = useQueryClient();
-  const [priority, setPriority] = useState<'' | IncidentPriority>('');
-  const [status, setStatus] = useState<'' | IncidentStatus>('');
+  const [searchParams] = useSearchParams();
+  const priorityParam = searchParams.get('priority');
+  const statusParam = searchParams.get('status');
+
+  const initialPriority = priorityParam === 'low' || priorityParam === 'medium' || priorityParam === 'high' || priorityParam === 'critical' ? priorityParam : '';
+  const initialStatus: '' | IncidentStatus = statusParam === 'in_progress' ? 'in_progress' : statusParam === 'open' || statusParam === 'resolved' || statusParam === 'closed' ? statusParam : '';
+
+  const [priority, setPriority] = useState<'' | IncidentPriority>(initialPriority);
+  const [status, setStatus] = useState<'' | IncidentStatus>(initialStatus);
   const [assigneeUserId, setAssigneeUserId] = useState('');
   const [alertId, setAlertId] = useState('');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);

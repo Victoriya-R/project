@@ -143,7 +143,28 @@ export const dashboardApi = {
       },
       meta: equipment.meta.usingMock || cabinets.meta.usingMock || zones.meta.usingMock ? mockMeta('dashboard', 'Dashboard composes data from API endpoints and mock fallbacks when some endpoints are missing.') : liveMeta('dashboard')
     };
-  }
+  },
+
+  async getAlertsIncidentsSummary() {
+    const [alertsResult, incidentsResult] = await Promise.all([
+      alertsApi.list(),
+      incidentsApi.list()
+    ]);
+
+    const alerts = alertsResult.data;
+    const incidents = incidentsResult.data;
+
+    return {
+      data: {
+        newAlerts: alerts.filter((alert) => alert.status === 'new').length,
+        criticalAlerts: alerts.filter((alert) => alert.severity === 'critical' && alert.status !== 'resolved').length,
+        openIncidents: incidents.filter((incident) => incident.status === 'open' || incident.status === 'in_progress').length
+      },
+      meta: alertsResult.meta.usingMock || incidentsResult.meta.usingMock
+        ? mockMeta('dashboard/alerts-incidents-summary', 'Summary is calculated on frontend from alerts and incidents lists.')
+        : liveMeta('dashboard/alerts-incidents-summary')
+    };
+  },
 };
 
 export const equipmentApi = {

@@ -1,5 +1,6 @@
 import db from '../utils/db.js';  // Подключение к базе данных
 import logger from '../utils/logger.js';  // Логирование
+import { evaluateRackAlertsSafe } from '../services/rackAlertsService.js';
 
 const getOwnerUserId = (req) => Number(req.user?.userId);
 
@@ -785,6 +786,8 @@ export const updateSwitchCabinet = async (req, res) => {
       return res.status(404).json({ error: 'Стойка не найдена' });
     }
 
+    await evaluateRackAlertsSafe(id, getOwnerUserId(req));
+
     logger.info(`Success: SwitchCabinet with ID: ${id} updated`);
     return res.status(200).json({ message: `Стойка с ID ${id} успешно обновлена` });
   } catch (error) {
@@ -848,6 +851,8 @@ export const partialUpdateSwitchCabinet = async (req, res) => {
     if (changes === 0) {
       return res.status(404).json({ error: 'Стойка не найдена' });
     }
+
+    await evaluateRackAlertsSafe(id, getOwnerUserId(req));
 
     logger.info(`Success: Partial update of SwitchCabinet with ID: ${id}`);
     return res.status(200).json({ message: `Стойка с ID ${id} успешно обновлена` });
@@ -978,6 +983,9 @@ export const placeInSwitchCabinet = async (req, res) => {
 
     const equipment = await getEquipmentRowById(equipment_id, ownerUserId);
     if (!equipment) return res.status(404).json({ error: 'Оборудование не найдено' });
+    const previousRackId = equipment.switch_cabinet_id === null || equipment.switch_cabinet_id === undefined
+      ? null
+      : Number(equipment.switch_cabinet_id);
 
     const endUnit = start_unit + unit_size - 1;
     const rackCapacity = Number(switchCabinet.unit_capacity ?? 42);
@@ -1041,6 +1049,11 @@ export const placeInSwitchCabinet = async (req, res) => {
 
     if (changes === 0) {
       return res.status(404).json({ error: 'Оборудование не найдено' });
+    }
+
+    await evaluateRackAlertsSafe(switch_cabinet_id, ownerUserId);
+    if (previousRackId && previousRackId !== switch_cabinet_id) {
+      await evaluateRackAlertsSafe(previousRackId, ownerUserId);
     }
 
     logger.info(`Equipment ID: ${equipment_id} placed in Switch Cabinet ID: ${switch_cabinet_id}`);
@@ -1165,6 +1178,8 @@ export const removeFromSwitchCabinet = async (req, res) => {
     if (changes === 0) {
       return res.status(404).json({ error: 'Оборудование не найдено' });
     }
+
+    await evaluateRackAlertsSafe(row.switch_cabinet_id, getOwnerUserId(req));
 
     logger.info(`Equipment ID: ${equipment_id} removed from Switch Cabinet`);
     return res.status(200).json({ message: 'Оборудование убрано из стойки', equipment_id });

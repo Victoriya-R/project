@@ -1,7 +1,9 @@
 import db from '../utils/db.js';
 import logger from '../utils/logger.js';
-
-const nowIso = () => new Date().toISOString();
+import {
+  resolveAlertForRule as resolveAutoAlertForRule,
+  upsertAlertForRule as upsertAutoAlertForRule
+} from './alertDedupService.js';
 
 const get = (query, params = []) => new Promise((resolve, reject) => {
   db.get(query, params, (err, row) => {
@@ -22,17 +24,6 @@ const all = (query, params = []) => new Promise((resolve, reject) => {
     }
 
     resolve(rows ?? []);
-  });
-});
-
-const run = (query, params = []) => new Promise((resolve, reject) => {
-  db.run(query, params, function onRun(err) {
-    if (err) {
-      reject(err);
-      return;
-    }
-
-    resolve({ changes: this.changes, lastID: this.lastID });
   });
 });
 
@@ -115,62 +106,22 @@ export const upsertAlertForRule = async ({
   severity,
   title,
   description
-}) => {
-  const existingAlert = await get(
-    `SELECT id, status
-     FROM alerts
-     WHERE owner_user_id = ?
-       AND source_type = ?
-       AND source_id = ?
-       AND rule_code = ?
-       AND status <> 'resolved'
-     ORDER BY created_at ASC
-     LIMIT 1`,
-    [ownerUserId, ALERT_SOURCE_TYPE, sourceId, ruleCode]
-  );
+}) => upsertAutoAlertForRule({
+  ownerUserId,
+  sourceType: ALERT_SOURCE_TYPE,
+  sourceId,
+  ruleCode,
+  severity,
+  title,
+  description
+});
 
-  const timestamp = nowIso();
-
-  if (existingAlert) {
-    await run(
-      `UPDATE alerts
-       SET title = ?,
-           description = ?,
-           severity = ?,
-           updated_at = ?,
-           resolved_at = NULL
-       WHERE id = ? AND owner_user_id = ?`,
-      [title, description, severity, timestamp, existingAlert.id, ownerUserId]
-    );
-
-    return existingAlert.id;
-  }
-
-  const insertResult = await run(
-    `INSERT INTO alerts (title, description, severity, source_type, source_id, status, rule_code, owner_user_id, created_at, updated_at, resolved_at)
-     VALUES (?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, NULL)`,
-    [title, description, severity, ALERT_SOURCE_TYPE, sourceId, ruleCode, ownerUserId, timestamp, timestamp]
-  );
-
-  return insertResult.lastID;
-};
-
-export const resolveAlertForRule = async ({ ownerUserId, sourceId, ruleCode }) => {
-  const timestamp = nowIso();
-
-  await run(
-    `UPDATE alerts
-     SET status = 'resolved',
-         updated_at = ?,
-         resolved_at = ?
-     WHERE owner_user_id = ?
-       AND source_type = ?
-       AND source_id = ?
-       AND rule_code = ?
-       AND status <> 'resolved'`,
-    [timestamp, timestamp, ownerUserId, ALERT_SOURCE_TYPE, sourceId, ruleCode]
-  );
-};
+export const resolveAlertForRule = async ({ ownerUserId, sourceId, ruleCode }) => resolveAutoAlertForRule({
+  ownerUserId,
+  sourceType: ALERT_SOURCE_TYPE,
+  sourceId,
+  ruleCode
+});
 
 export const evaluateRackAlerts = async (rackId, ownerUserId) => {
   const normalizedRackId = Number(rackId);

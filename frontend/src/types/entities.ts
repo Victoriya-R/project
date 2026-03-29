@@ -244,6 +244,23 @@ export interface Alert {
   resolved_at: string | null;
 }
 
+export type IncidentPriority = 'low' | 'medium' | 'high' | 'critical';
+export type IncidentStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+
+export interface Incident {
+  id: number;
+  priority: IncidentPriority;
+  title: string;
+  description: string | null;
+  status: IncidentStatus;
+  assignee_user_id: number | null;
+  alert_id: number | null;
+  resolution_comment: string | null;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+}
+
 export interface ApiMeta {
   usingMock: boolean;
   reason?: string;

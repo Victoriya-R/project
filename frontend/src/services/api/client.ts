@@ -21,7 +21,10 @@ import {
   Alert,
   AlertStatus,
   AlertSeverity,
-  AlertSourceType
+  AlertSourceType,
+  Incident,
+  IncidentPriority,
+  IncidentStatus
 } from '../../types/entities';
 import {
   mockCables,
@@ -229,6 +232,24 @@ export const alertsApi = {
   getById: async (id: number) => (await api.get<Alert>(`/alerts/${id}`)).data,
   updateStatus: async (id: number, status: AlertStatus) => (await api.patch<Alert>(`/alerts/${id}/status`, { status })).data,
   createIncident: async (id: number) => (await api.post(`/alerts/${id}/create-incident`)).data
+};
+
+export const incidentsApi = {
+  list: async (params?: { priority?: IncidentPriority; status?: IncidentStatus; assignee_user_id?: number; alert_id?: number }) => {
+    const query = Object.fromEntries(
+      Object.entries(params ?? {}).filter(([, value]) => value !== undefined && value !== null)
+    );
+
+    return withFallback<Incident[]>(
+      '/incidents',
+      async () => (await api.get('/incidents', { params: query })).data,
+      () => [],
+      'Incidents endpoint fallback returns empty list when API is unavailable.'
+    );
+  },
+  getById: async (id: number) => (await api.get<Incident>(`/incidents/${id}`)).data,
+  update: async (id: number, payload: Partial<Pick<Incident, 'assignee_user_id' | 'resolution_comment' | 'status'>>) => (await api.patch<Incident>(`/incidents/${id}`, payload)).data,
+  updateStatus: async (id: number, status: IncidentStatus) => (await api.patch<Incident>(`/incidents/${id}/status`, { status })).data
 };
 
 export const reportsApi = {

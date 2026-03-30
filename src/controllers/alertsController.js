@@ -1,5 +1,6 @@
 import db from '../utils/db.js';
 import logger from '../utils/logger.js';
+import { notifyAlertCreated, notifyIncidentCreated } from '../services/notificationService.js';
 
 const ALERT_SEVERITIES = new Set(['info', 'warning', 'critical']);
 const ALERT_STATUSES = new Set(['new', 'acknowledged', 'resolved', 'muted']);
@@ -320,6 +321,8 @@ export const createAlertHandler = async (req, res) => {
       owner_user_id: ownerUserId
     });
 
+    await notifyAlertCreated(created, ownerUserId);
+
     return res.status(201).json(normalizeAlert(created));
   } catch (error) {
     logger.error(`Error: Failed to create alert. Error: ${error.message}`);
@@ -416,6 +419,8 @@ export const createIncidentFromAlertHandler = async (req, res) => {
     if (result.error) {
       return res.status(result.error.status).json(result.error.payload);
     }
+
+    await notifyIncidentCreated(result.data, getOwnerUserId(req));
 
     return res.status(201).json(normalizeIncident(result.data));
   } catch (error) {

@@ -212,6 +212,42 @@ const createAlertsTable = async () => {
   `);
 };
 
+
+const createNotificationsTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      entity_type TEXT CHECK(entity_type IN ('alert', 'incident')),
+      entity_id INTEGER,
+      is_read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      read_at TEXT,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+};
+
+const createNotificationSettingsTable = async () => {
+  await run(`
+    CREATE TABLE IF NOT EXISTS notification_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      in_app_enabled INTEGER NOT NULL DEFAULT 1,
+      alert_created_enabled INTEGER NOT NULL DEFAULT 1,
+      incident_created_enabled INTEGER NOT NULL DEFAULT 1,
+      incident_status_changed_enabled INTEGER NOT NULL DEFAULT 1,
+      incident_assigned_enabled INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+};
+
 const createIncidentsTable = async () => {
   await run(`
     CREATE TABLE IF NOT EXISTS incidents (
@@ -362,6 +398,8 @@ const ensureBaseSchema = async () => {
   await createFloorPlanRacksTable();
   await createAlertsTable();
   await createIncidentsTable();
+  await createNotificationsTable();
+  await createNotificationSettingsTable();
   await rebuildPortsTableIfNeeded();
 
   await ensureColumn('users', 'is_superuser', 'INTEGER NOT NULL DEFAULT 0');
@@ -396,6 +434,11 @@ const ensureBaseSchema = async () => {
   await createIndexIfMissing('incidents_priority_idx', 'incidents', 'priority');
   await createIndexIfMissing('incidents_alert_id_idx', 'incidents', 'alert_id');
   await createIndexIfMissing('incidents_assignee_user_id_idx', 'incidents', 'assignee_user_id');
+  await createIndexIfMissing('notifications_user_id_idx', 'notifications', 'user_id');
+  await createIndexIfMissing('notifications_is_read_idx', 'notifications', 'is_read');
+  await createIndexIfMissing('notifications_type_idx', 'notifications', 'type');
+  await createIndexIfMissing('notifications_created_at_idx', 'notifications', 'created_at');
+  await createUniqueIndexIfMissing('notification_settings_user_id_unique_idx', 'notification_settings', 'user_id');
 };
 
 const ensureSeedData = async () => {

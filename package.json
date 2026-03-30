@@ -8,7 +8,8 @@
     "backend": "node src/app.js",
     "frontend": "npm --prefix frontend run dev",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "kafka:demo-consumer": "node src/services/kafka/demoNotificationConsumer.js"
+    "kafka:demo-consumer": "node src/services/kafka/demoNotificationConsumer.js",
+    "dev": "sh -c \"npm run backend & npm run frontend\""
   },
   "keywords": [],
   "author": "",

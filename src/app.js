@@ -19,7 +19,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use((req, res, next) => {
-  const allowedOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+  const allowedOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:8080';
   res.header('Access-Control-Allow-Origin', allowedOrigin);
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
@@ -180,6 +180,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: t
 
 app.get('/swagger.json', (_req, res) => {
   res.json(swaggerSpec);
+});
+
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
 });
 
 const PORT = process.env.PORT || 3000;

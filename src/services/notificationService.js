@@ -1,4 +1,6 @@
 import db from '../utils/db.js';
+import logger from '../utils/logger.js';
+import { publishNotificationEvent } from './kafka/kafkaService.js';
 
 export const NOTIFICATION_TYPES = {
   ALERT_CREATED: 'alert_created',
@@ -16,6 +18,15 @@ const NOTIFICATION_TYPE_TO_SETTING_FIELD = {
 
 const ALLOWED_NOTIFICATION_TYPES = new Set(Object.values(NOTIFICATION_TYPES));
 const ALLOWED_ENTITY_TYPES = new Set(['alert', 'incident']);
+
+
+const NOTIFICATION_TYPE_TO_EVENT_TYPE = {
+  [NOTIFICATION_TYPES.ALERT_CREATED]: 'notification.alert_created',
+  [NOTIFICATION_TYPES.INCIDENT_CREATED]: 'notification.incident_created',
+  [NOTIFICATION_TYPES.INCIDENT_STATUS_CHANGED]: 'notification.incident_status_changed',
+  [NOTIFICATION_TYPES.INCIDENT_ASSIGNED]: 'notification.incident_assigned'
+};
+
 
 const run = (query, params = []) => new Promise((resolve, reject) => {
   db.run(query, params, function onRun(err) {
@@ -161,7 +172,24 @@ export const createNotification = async ({ user_id, type, title, message, entity
     [result.lastID, Number(user_id)]
   );
 
-  return normalizeNotification(row);
+  const notification = normalizeNotification(row);
+  const eventType = NOTIFICATION_TYPE_TO_EVENT_TYPE[notification.type] ?? `notification.${notification.type}`;
+
+  await publishNotificationEvent({
+    event_type: eventType,
+    notification_id: notification.id,
+    user_id: notification.user_id,
+    type: notification.type,
+    title: notification.title,
+    message: notification.message,
+    entity_type: notification.entity_type,
+    entity_id: notification.entity_id,
+    created_at: notification.created_at
+  }).catch((error) => {
+    logger.error(`Failed to publish notification ${notification.id} event: ${error.message}`);
+  });
+
+  return notification;
 };
 
 export const listNotifications = async (userId, filters = {}) => {

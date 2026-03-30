@@ -12,6 +12,7 @@ import alertsRoutes from './routes/alertsRoutes.js';
 import incidentsRoutes from './routes/incidentsRoutes.js';
 import notificationsRoutes from './routes/notificationsRoutes.js';
 import authenticateToken from './middlewares/authMiddleware.js';
+import { disconnectKafka, initKafka } from './services/kafka/kafkaService.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -182,8 +183,25 @@ app.get('/swagger.json', (_req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+
+const startServer = async () => {
+  await initKafka();
+
+  const server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+
+  const gracefulShutdown = async () => {
+    await disconnectKafka();
+    server.close(() => {
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGINT', gracefulShutdown);
+  process.on('SIGTERM', gracefulShutdown);
+};
+
+startServer();
 
 export default app;

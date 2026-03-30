@@ -10,8 +10,6 @@ RUN npm --prefix frontend install
 
 COPY . .
 
-RUN npm run build --prefix frontend
-
 EXPOSE 3000
 EXPOSE 8080
 

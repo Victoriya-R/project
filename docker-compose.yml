@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: app
+    command: npm run dev
     ports:
       - '3000:3000'
       - '8080:8080'
@@ -13,9 +14,18 @@ services:
       - .env
     environment:
       NODE_ENV: development
+      FRONTEND_ORIGIN: http://localhost:8080
     depends_on:
-      - kafka
-      - zookeeper
+      kafka:
+        condition: service_healthy
+      zookeeper:
+        condition: service_started
+    healthcheck:
+      test: ['CMD', 'node', '-e', "require('http').get('http://127.0.0.1:3000/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - backend_network
 
@@ -41,6 +51,12 @@ services:
       KAFKA_CREATE_TOPICS: notifications:1:1
     depends_on:
       - zookeeper
+    healthcheck:
+      test: ['CMD-SHELL', 'kafka-topics.sh --bootstrap-server localhost:9093 --list >/dev/null 2>&1']
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
     networks:
       - backend_network
 
@@ -54,7 +70,25 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9093
       DYNAMIC_CONFIG_ENABLED: 'true'
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
+    networks:
+      - backend_network
+
+  demo-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demo-consumer
+    command: npm run kafka:demo-consumer
+    env_file:
+      - .env
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - demo
     networks:
       - backend_network
 

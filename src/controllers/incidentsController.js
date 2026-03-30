@@ -1,5 +1,6 @@
 import db from '../utils/db.js';
 import logger from '../utils/logger.js';
+import { notifyIncidentAssigned, notifyIncidentCreated, notifyIncidentStatusChanged } from '../services/notificationService.js';
 
 const INCIDENT_PRIORITIES = new Set(['low', 'medium', 'high', 'critical']);
 const INCIDENT_STATUSES = new Set(['open', 'in_progress', 'resolved', 'closed']);
@@ -354,6 +355,12 @@ export const createIncidentHandler = async (req, res) => {
       owner_user_id: ownerUserId
     });
 
+    await notifyIncidentCreated(created, ownerUserId);
+
+    if (created.assignee_user_id !== null) {
+      await notifyIncidentAssigned(created, created.assignee_user_id);
+    }
+
     return res.status(201).json(normalizeIncident(created));
   } catch (error) {
     logger.error(`Error: Failed to create incident. Error: ${error.message}`);
@@ -443,9 +450,19 @@ export const updateIncidentHandler = async (req, res) => {
       }
     }
 
+    const beforeUpdate = await getIncidentById(incidentId, ownerUserId);
+    if (!beforeUpdate) {
+      return res.status(404).json({ error: 'Инцидент не найден' });
+    }
+
     const updated = await updateIncident(incidentId, validation.data, ownerUserId);
     if (!updated) {
       return res.status(404).json({ error: 'Инцидент не найден' });
+    }
+
+    const assigneeChanged = beforeUpdate.assignee_user_id !== updated.assignee_user_id;
+    if (assigneeChanged && updated.assignee_user_id !== null) {
+      await notifyIncidentAssigned(updated, updated.assignee_user_id);
     }
 
     return res.status(200).json(normalizeIncident(updated));
@@ -467,10 +484,18 @@ export const updateIncidentStatusHandler = async (req, res) => {
   }
 
   try {
-    const updated = await updateIncidentStatus(incidentId, validation.data, getOwnerUserId(req));
+    const ownerUserId = getOwnerUserId(req);
+    const beforeUpdate = await getIncidentById(incidentId, ownerUserId);
+    if (!beforeUpdate) {
+      return res.status(404).json({ error: 'Инцидент не найден' });
+    }
+
+    const updated = await updateIncidentStatus(incidentId, validation.data, ownerUserId);
     if (!updated) {
       return res.status(404).json({ error: 'Инцидент не найден' });
     }
+
+    await notifyIncidentStatusChanged(updated, beforeUpdate.status, updated.status, ownerUserId);
 
     return res.status(200).json(normalizeIncident(updated));
   } catch (error) {

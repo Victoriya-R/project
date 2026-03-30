@@ -24,7 +24,10 @@ import {
   AlertSourceType,
   Incident,
   IncidentPriority,
-  IncidentStatus
+  IncidentStatus,
+  NotificationItem,
+  NotificationSettings,
+  NotificationType
 } from '../../types/entities';
 import {
   mockCables,
@@ -271,6 +274,31 @@ export const incidentsApi = {
   getById: async (id: number) => (await api.get<Incident>(`/incidents/${id}`)).data,
   update: async (id: number, payload: Partial<Pick<Incident, 'assignee_user_id' | 'resolution_comment' | 'status'>>) => (await api.patch<Incident>(`/incidents/${id}`, payload)).data,
   updateStatus: async (id: number, status: IncidentStatus) => (await api.patch<Incident>(`/incidents/${id}/status`, { status })).data
+};
+
+
+
+export const notificationsApi = {
+  list: async (params?: { is_read?: boolean; type?: NotificationType; limit?: number }) => {
+    const query = Object.fromEntries(
+      Object.entries(params ?? {}).filter(([, value]) => value !== undefined && value !== null)
+    );
+
+    return withFallback<NotificationItem[]>(
+      '/notifications',
+      async () => (await api.get('/notifications', { params: query })).data,
+      () => [],
+      'Notifications endpoint fallback returns empty list when API is unavailable.'
+    );
+  },
+  unreadCount: async () => (await api.get<{ count: number }>('/notifications/unread-count')).data,
+  markAsRead: async (id: number) => (await api.patch<NotificationItem>(`/notifications/${id}/read`)).data,
+  markAllAsRead: async () => (await api.patch<{ updated: number }>('/notifications/read-all')).data
+};
+
+export const notificationSettingsApi = {
+  get: async () => (await api.get<NotificationSettings>('/notification-settings')).data,
+  update: async (payload: Partial<Pick<NotificationSettings, 'in_app_enabled' | 'alert_created_enabled' | 'incident_created_enabled' | 'incident_status_changed_enabled' | 'incident_assigned_enabled'>>) => (await api.patch<NotificationSettings>('/notification-settings', payload)).data
 };
 
 export const reportsApi = {

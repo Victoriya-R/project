@@ -266,3 +266,30 @@ export interface ApiMeta {
   reason?: string;
   endpoint?: string;
 }
+
+
+export type NotificationType = 'alert_created' | 'incident_created' | 'incident_status_changed' | 'incident_assigned';
+
+export interface NotificationItem {
+  id: number;
+  user_id: number;
+  type: NotificationType;
+  title: string;
+  message: string;
+  entity_type: 'alert' | 'incident' | null;
+  entity_id: number | null;
+  is_read: boolean;
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface NotificationSettings {
+  user_id: number;
+  in_app_enabled: boolean;
+  alert_created_enabled: boolean;
+  incident_created_enabled: boolean;
+  incident_status_changed_enabled: boolean;
+  incident_assigned_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}

@@ -35,13 +35,6 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
-app.use('/users', userRoutes);
-app.use('/equipment', authenticateToken, equipmentRoutes);
-app.use('/api', authenticateToken, floorplanRoutes);
-app.use('/alerts', authenticateToken, alertsRoutes);
-app.use('/incidents', authenticateToken, incidentsRoutes);
-app.use('/', authenticateToken, notificationsRoutes);
-
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -185,6 +178,13 @@ app.get('/swagger.json', (_req, res) => {
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
 });
+
+app.use('/users', userRoutes);
+app.use('/equipment', authenticateToken, equipmentRoutes);
+app.use('/api', authenticateToken, floorplanRoutes);
+app.use('/alerts', authenticateToken, alertsRoutes);
+app.use('/incidents', authenticateToken, incidentsRoutes);
+app.use('/', authenticateToken, notificationsRoutes);
 
 const PORT = process.env.PORT || 3000;
 

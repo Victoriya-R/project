@@ -172,6 +172,7 @@ export const dashboardApi = {
 
 export const equipmentApi = {
   list: () => withFallback<Equipment[]>('/equipment', async () => (await api.get('/equipment')).data, () => mockEquipment, 'Equipment list fallback uses local fixtures until API is populated.'),
+  listWithParams: (params?: { search?: string }) => withFallback<Equipment[]>('/equipment', async () => (await api.get('/equipment', { params })).data, () => mockEquipment, 'Equipment list fallback uses local fixtures until API is populated.'),
   detail: (id: number) => withFallback<Equipment>('/equipment/:id', async () => (await api.get(`/equipment/${id}`)).data, () => mockEquipment.find((item) => item.id === id) ?? mockEquipment[0], 'Equipment detail fallback uses local fixtures.'),
   ports: (equipmentId: number) => withFallback<Port[]>('/equipment/ports', async () => (await api.get('/equipment/ports', { params: { equipment_id: equipmentId } })).data, () => getPortsByEquipment(equipmentId), 'Ports endpoint fallback uses generated demo ports.'),
   create: async (payload: object) => api.post('/equipment', payload),

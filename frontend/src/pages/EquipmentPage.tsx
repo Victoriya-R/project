@@ -1,6 +1,6 @@
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '../i18n/provider';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
@@ -8,9 +8,11 @@ import { Button } from '../components/common/Button';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 import { DataTable } from '../components/common/DataTable';
 import { EmptyState } from '../components/common/EmptyState';
+import { ErrorState } from '../components/common/ErrorState';
 import { FilterBar } from '../components/common/FilterBar';
 import { FormField, SelectInput, TextInput } from '../components/common/FormField';
 import { MockBanner } from '../components/common/MockBanner';
+import { LoadingState } from '../components/common/LoadingState';
 import { PageHeader } from '../components/common/PageHeader';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useApiQuery } from '../hooks/useApiQuery';
@@ -25,7 +27,7 @@ type EquipmentEditorTarget = Equipment | UpsEntity;
 export function EquipmentPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [status, setStatus] = useState('');
   const [type, setType] = useState('');
   const [zone, setZone] = useState('');
@@ -37,7 +39,11 @@ export function EquipmentPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const role = useAuthStore((state) => state.user?.role);
-  const equipment = useApiQuery({ queryKey: ['equipment'], queryFn: equipmentApi.list });
+  const search = searchParams.get('search')?.trim() ?? '';
+  const equipment = useApiQuery({
+    queryKey: ['equipment', { search }],
+    queryFn: () => equipmentApi.listWithParams(search ? { search } : undefined)
+  });
   const cabinets = useApiQuery({ queryKey: ['cabinet-list'], queryFn: switchCabinetsApi.list });
   const zones = useApiQuery({ queryKey: ['zone-list'], queryFn: zonesApi.list });
 
@@ -143,14 +149,13 @@ export function EquipmentPage() {
     if (!equipment.data) return [];
     const cabinetZoneMap = new Map((cabinets.data?.data ?? []).map((item) => [item.id, item.zone_id]));
     return equipment.data.data.filter((item) => {
-      const matchesSearch = [item.name, item.serial].some((value) => value.toLowerCase().includes(search.toLowerCase()));
       const matchesType = !type || item.type === type;
       const matchesStatus = !status || item.status === status;
       const matchesCabinet = !cabinet || String(item.switch_cabinet_id ?? '') === cabinet;
       const matchesZone = !zone || String(cabinetZoneMap.get(item.switch_cabinet_id ?? -1) ?? '') === zone;
-      return matchesSearch && matchesType && matchesStatus && matchesCabinet && matchesZone;
+      return matchesType && matchesStatus && matchesCabinet && matchesZone;
     });
-  }, [cabinet, cabinets.data, equipment.data, search, status, type, zone]);
+  }, [cabinet, cabinets.data, equipment.data, status, type, zone]);
 
   const openCreate = () => {
     setFormMode('create');
@@ -181,6 +186,19 @@ export function EquipmentPage() {
     setDeleteOpen(true);
   };
 
+  const updateSearchInUrl = (value: string) => {
+    const query = value.trim();
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (query) {
+      nextParams.set('search', query);
+    } else {
+      nextParams.delete('search');
+    }
+
+    setSearchParams(nextParams);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -191,13 +209,15 @@ export function EquipmentPage() {
       />
       <MockBanner meta={equipment.data?.meta} />
       <FilterBar>
-        <FormField label={t('equipment.search')}><TextInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('equipment.searchPlaceholder')} /></FormField>
+        <FormField label={t('equipment.search')}><TextInput value={search} onChange={(e) => updateSearchInUrl(e.target.value)} placeholder={t('equipment.searchPlaceholder')} /></FormField>
         <FormField label={t('equipment.type')}><SelectInput value={type} onChange={(e) => setType(e.target.value)}><option value="">{t('common.all')}</option><option value="server">{t('equipment.type.server')}</option><option value="patchPanel">{t('equipment.type.patchPanel')}</option><option value="ups">{t('equipment.type.ups')}</option></SelectInput></FormField>
         <FormField label={t('equipment.status')}><SelectInput value={status} onChange={(e) => setStatus(e.target.value)}><option value="">{t('common.all')}</option><option value="active">{t('status.active')}</option><option value="inactive">{t('status.inactive')}</option><option value="maintenance">{t('status.maintenance')}</option><option value="planned">{t('status.planned')}</option></SelectInput></FormField>
         <FormField label={t('equipment.zone')}><SelectInput value={zone} onChange={(e) => setZone(e.target.value)}><option value="">{t('common.all')}</option>{zones.data?.data.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectInput></FormField>
         <FormField label={t('equipment.rack')}><SelectInput value={cabinet} onChange={(e) => setCabinet(e.target.value)}><option value="">{t('common.all')}</option>{cabinets.data?.data.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectInput></FormField>
       </FilterBar>
-      {filtered.length ? (
+      {equipment.isLoading ? <LoadingState /> : null}
+      {equipment.isError ? <ErrorState description={getApiErrorMessage(equipment.error, t('common.failedToLoad'))} /> : null}
+      {!equipment.isLoading && !equipment.isError && (filtered.length ? (
         <DataTable
           columns={[
             { key: 'name', header: t('nav.equipment'), render: (row) => <div><Link to={`/equipment/${row.id}`} className="font-semibold text-slate-900 hover:text-brand-700">{row.name}</Link><p className="text-xs text-slate-500">{row.model}</p></div> },
@@ -220,7 +240,7 @@ export function EquipmentPage() {
           ]}
           data={filtered}
         />
-      ) : <EmptyState title={t('equipment.noResults')} description={t('equipment.noResultsDesc')} />}
+      ) : <EmptyState title={search ? 'Ничего не найдено' : t('equipment.noResults')} description={t('equipment.noResultsDesc')} />)}
       <EquipmentFormModal
         open={formOpen}
         mode={formMode}

@@ -1,7 +1,7 @@
-import { PropsWithChildren, useMemo, useState } from 'react';
+import { FormEvent, PropsWithChildren, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, Bell, BellRing, Cable, ChartColumn, Cpu, LayoutDashboard, LockKeyhole, LogOut, Map, ShieldCheck, SquareStack, Unplug, Boxes, Siren } from 'lucide-react';
-import { Link, NavLink } from 'react-router-dom';
+import { Activity, Bell, BellRing, Cable, ChartColumn, Cpu, LayoutDashboard, LockKeyhole, LogOut, Map, Search, ShieldCheck, SquareStack, Unplug, Boxes, Siren } from 'lucide-react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth-store';
 import { useI18n } from '../../i18n/provider';
 import { notificationSettingsApi, notificationsApi } from '../../services/api/client';
@@ -25,7 +25,9 @@ export function AppShell({ children }: PropsWithChildren) {
   const role = user?.role ?? 'user';
   const isSuperuser = Boolean(user?.isSuperuser);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [quickSearch, setQuickSearch] = useState('');
   const quickSearchPlaceholder = useMemo(() => t('app.searchPlaceholder'), [t]);
+  const navigate = useNavigate();
 
   const notificationsQuery = useQuery({
     queryKey: ['notifications-header'],
@@ -81,6 +83,20 @@ export function AppShell({ children }: PropsWithChildren) {
 
   const unreadCount = unreadCountQuery.data?.count ?? 0;
   const canShowInApp = settingsQuery.data?.in_app_enabled ?? true;
+  const runQuickSearch = () => {
+    const query = quickSearch.trim();
+
+    if (!query) {
+      return;
+    }
+
+    navigate(`/equipment?search=${encodeURIComponent(query)}`);
+  };
+
+  const onSearchSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    runQuickSearch();
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -132,7 +148,18 @@ export function AppShell({ children }: PropsWithChildren) {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <LanguageSwitcher />
 
-                <input className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100 sm:w-80" placeholder={quickSearchPlaceholder} />
+                <form className="flex w-full items-center gap-2 sm:w-80" onSubmit={onSearchSubmit}>
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+                    placeholder={quickSearchPlaceholder}
+                    value={quickSearch}
+                    onChange={(event) => setQuickSearch(event.target.value)}
+                    aria-label={quickSearchPlaceholder}
+                  />
+                  <Button type="submit" variant="secondary" className="px-3" aria-label="Поиск">
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </form>
 
                 <div className="relative">
                   <Button variant="secondary" className="relative" onClick={() => setIsNotificationOpen((value) => !value)}>

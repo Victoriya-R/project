@@ -1384,25 +1384,36 @@ export const getEquipmentById = async (req, res) => {
 
 // Получение списка оборудования с использованием async/await
 export const getEquipment = async (req, res) => {
-    const ownerUserId = getOwnerUserId(req);
-    const query = 'SELECT * FROM assets WHERE owner_user_id = ?';
+  const ownerUserId = getOwnerUserId(req);
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
-    try {
-        const rows = await new Promise((resolve, reject) => {
-            db.all(query, [ownerUserId], (err, rows) => {
-                if (err) {
-                    return reject(err);
-                }
-                resolve(rows);
-            });
-        });
+  const whereClauses = ['owner_user_id = ?'];
+  const params = [ownerUserId];
 
-        logger.info(`Success: Fetched ${rows.length} equipment`);
-        res.json(rows);
-    } catch (error) {
-        logger.error(`Error: Failed to fetch equipment. Error: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
+  if (search) {
+    whereClauses.push('(LOWER(name) LIKE ? OR LOWER(serial) LIKE ?)');
+    const searchLike = `%${search.toLowerCase()}%`;
+    params.push(searchLike, searchLike);
+  }
+
+  const query = `SELECT * FROM assets WHERE ${whereClauses.join(' AND ')}`;
+
+  try {
+    const rows = await new Promise((resolve, reject) => {
+      db.all(query, params, (err, rows) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(rows);
+      });
+    });
+
+    logger.info(`Success: Fetched ${rows.length} equipment`);
+    res.json(rows);
+  } catch (error) {
+    logger.error(`Error: Failed to fetch equipment. Error: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 // Получение оборудования по статусу

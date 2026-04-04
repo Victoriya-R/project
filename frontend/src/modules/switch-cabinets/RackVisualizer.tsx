@@ -72,9 +72,31 @@ export function RackVisualizer({ cabinet }: { cabinet: SwitchCabinet }) {
   const equipmentQuery = useApiQuery({ queryKey: ['equipment'], queryFn: equipmentApi.list });
   const canManage = Boolean(role);
 
-  const units = Array.from({ length: 12 }).map((_, index) => ({ unit: 12 - index, equipment: cabinet.equipment?.[index] }));
-  const currentWeight = cabinet.equipment?.reduce((sum, item) => sum + Number(item.weight ?? 0), 0) ?? 0;
-  const currentEnergy = cabinet.equipment?.reduce((sum, item) => sum + Number(item.energy_consumption ?? 0), 0) ?? 0;
+  const equipmentById = useMemo(() => {
+    const allEquipment = equipmentQuery.data?.data ?? [];
+    return new Map(allEquipment.map((item) => [item.id, item]));
+  }, [equipmentQuery.data]);
+
+  const rackEquipment = useMemo(() => {
+    const fromCabinet = (cabinet.equipment ?? []).map((item) => {
+      const linked = equipmentById.get(item.id);
+      return {
+        ...item,
+        weight: item.weight ?? linked?.weight ?? 0,
+        energy_consumption: item.energy_consumption ?? linked?.energy_consumption ?? 0
+      };
+    });
+
+    if (fromCabinet.length) {
+      return fromCabinet;
+    }
+
+    return (equipmentQuery.data?.data ?? []).filter((item) => item.switch_cabinet_id === cabinet.id);
+  }, [cabinet.equipment, cabinet.id, equipmentById, equipmentQuery.data]);
+
+  const units = Array.from({ length: 12 }).map((_, index) => ({ unit: 12 - index, equipment: rackEquipment[index] }));
+  const currentWeight = rackEquipment.reduce((sum, item) => sum + Number(item.weight ?? 0), 0);
+  const currentEnergy = rackEquipment.reduce((sum, item) => sum + Number(item.energy_consumption ?? 0), 0);
   const unassignedEquipment = useMemo(() => (equipmentQuery.data?.data ?? []).filter((item) => !item.switch_cabinet_id), [equipmentQuery.data]);
   const selectedEquipment = useMemo(
     () => unassignedEquipment.find((item) => item.id === Number(selectedEquipmentId)),

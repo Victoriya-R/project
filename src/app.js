@@ -169,7 +169,9 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerSpec, { explorer: true }));
+app.get('/api-docs/', swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 app.get('/swagger.json', (_req, res) => {
   res.json(swaggerSpec);
@@ -184,7 +186,14 @@ app.use('/equipment', authenticateToken, equipmentRoutes);
 app.use('/api', authenticateToken, floorplanRoutes);
 app.use('/alerts', authenticateToken, alertsRoutes);
 app.use('/incidents', authenticateToken, incidentsRoutes);
-app.use('/', authenticateToken, notificationsRoutes);
+app.use((req, res, next) => {
+  if (req.path.startsWith('/notifications') || req.path.startsWith('/notification-settings')) {
+    return authenticateToken(req, res, next);
+  }
+
+  return next();
+});
+app.use('/', notificationsRoutes);
 
 const PORT = process.env.PORT || 3000;
 

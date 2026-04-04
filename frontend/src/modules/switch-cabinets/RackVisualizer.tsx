@@ -82,8 +82,8 @@ export function RackVisualizer({ cabinet }: { cabinet: SwitchCabinet }) {
       const linked = equipmentById.get(item.id);
       return {
         ...item,
-        weight: item.weight ?? linked?.weight ?? 0,
-        energy_consumption: item.energy_consumption ?? linked?.energy_consumption ?? 0
+        weight: linked?.weight ?? item.weight ?? 0,
+        energy_consumption: linked?.energy_consumption ?? item.energy_consumption ?? 0
       };
     });
 

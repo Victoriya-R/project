@@ -48,6 +48,7 @@ export function EquipmentPage() {
   const zones = useApiQuery({ queryKey: ['zone-list'], queryFn: zonesApi.list });
   const toOptionalNumber = (value: unknown) => {
     if (value === undefined || value === null) return undefined;
+    if (typeof value === 'string' && value.trim() === '') return undefined;
     const normalized = Number(value);
     return Number.isFinite(normalized) ? normalized : undefined;
   };

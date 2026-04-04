@@ -82,9 +82,9 @@ export function SwitchCabinetsPage() {
           { key: 'name', header: t('equipment.rack'), render: (row) => <Link to={`/switch-cabinets/${row.id}`} className="font-semibold text-slate-900 hover:text-brand-700">{row.name}</Link> },
           { key: 'zone', header: t('equipment.zone'), render: (row) => zones.data?.data.find((item) => item.id === row.zone_id)?.name ?? t('common.unassigned') },
           { key: 'serial', header: t('cabinet.form.serial'), render: (row) => row.serial_number },
-          { key: 'load', header: t('cabinet.energy'), render: (row) => `${row.energy_consumption} W / ${row.energy_limit} W` },
-          { key: 'weight', header: t('cabinet.weightLimit'), render: (row) => `${row.weight} kg` },
-          { key: 'equipment', header: t('cabinet.assets'), render: (row) => t('cabinet.assetsCount', { count: row.equipment?.length ?? 0 }) },
+          { key: 'load', header: t('cabinet.energy'), render: (row) => `${row.current_energy_consumption ?? 0} W / ${row.energy_limit} W` },
+          { key: 'weight', header: t('cabinet.weightLimit'), render: (row) => `${row.current_weight ?? 0} kg / ${row.weight} kg` },
+          { key: 'equipment', header: t('cabinet.assets'), render: (row) => t('cabinet.assetsCount', { count: row.equipment_count ?? 0 }) },
           {
             key: 'actions',
             header: t('equipment.actions'),

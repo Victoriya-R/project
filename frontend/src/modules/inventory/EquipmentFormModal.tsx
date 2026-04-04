@@ -11,6 +11,9 @@ interface EquipmentFormState {
   model: string;
   serial: string;
   status: EntityStatus;
+  weight: string;
+  energy_consumption: string;
+  rack_unit_size: string;
   server_ip_address: string;
   server_memory_slots: string;
   server_cpu: string;
@@ -29,6 +32,9 @@ const defaultState: EquipmentFormState = {
   model: '',
   serial: '',
   status: 'active',
+  weight: '',
+  energy_consumption: '',
+  rack_unit_size: '1',
   server_ip_address: '',
   server_memory_slots: '',
   server_cpu: '',
@@ -44,6 +50,9 @@ const defaultState: EquipmentFormState = {
 function isPositiveNumber(value: string) {
   return Number.isFinite(Number(value)) && Number(value) > 0;
 }
+function isNonNegativeNumber(value: string) {
+  return Number.isFinite(Number(value)) && Number(value) >= 0;
+}
 
 function toFormState(entity?: Equipment | UpsEntity | null): EquipmentFormState {
   if (!entity) return defaultState;
@@ -55,6 +64,9 @@ function toFormState(entity?: Equipment | UpsEntity | null): EquipmentFormState 
     model: 'model' in entity ? entity.model ?? '' : 'UPS',
     serial: 'serial' in entity ? entity.serial ?? '' : '',
     status: entity.status ?? 'active',
+    weight: String(('weight' in entity ? entity.weight : undefined) ?? ''),
+    energy_consumption: String(('energy_consumption' in entity ? entity.energy_consumption : undefined) ?? ''),
+    rack_unit_size: String((('rack_unit_size' in entity ? entity.rack_unit_size : undefined) ?? ('unit_size' in entity ? entity.unit_size : undefined)) ?? 1),
     server_ip_address: '',
     server_memory_slots: '',
     server_cpu: '',
@@ -106,6 +118,9 @@ export function EquipmentFormModal({
     server_os: mode === 'create' && form.type === 'server' && !form.server_os.trim() ? t('crud.validation.required') : '',
     server_ports: mode === 'create' && form.type === 'server' && !isPositiveNumber(form.server_ports) ? t('crud.validation.positiveNumber') : '',
     patch_ports: mode === 'create' && form.type === 'patchPanel' && !isPositiveNumber(form.patch_ports) ? t('crud.validation.positiveNumber') : '',
+    weight: form.weight.trim() && !isNonNegativeNumber(form.weight) ? t('crud.validation.nonNegativeNumber') : '',
+    energy_consumption: form.energy_consumption.trim() && !isNonNegativeNumber(form.energy_consumption) ? t('crud.validation.nonNegativeNumber') : '',
+    rack_unit_size: form.rack_unit_size.trim() && !isPositiveNumber(form.rack_unit_size) ? t('crud.validation.positiveNumber') : '',
     ups_capacity: form.type === 'ups' && !isPositiveNumber(form.ups_capacity) ? t('crud.validation.positiveNumber') : '',
     ups_battery_life: form.type === 'ups' && !isPositiveNumber(form.ups_battery_life) ? t('crud.validation.positiveNumber') : ''
   }), [form, mode, t]);
@@ -154,6 +169,15 @@ export function EquipmentFormModal({
           </FormField>
           <FormField label={t('equipment.form.serial')} error={touched ? errors.serial : undefined} hint={isReadOnlyStructure ? t('equipment.form.serialReadonly') : undefined}>
             <TextInput value={form.serial} onChange={(e) => setField('serial', e.target.value)} placeholder={t('equipment.form.serialPlaceholder')} disabled={form.type === 'ups' || isReadOnlyStructure} />
+          </FormField>
+          <FormField label={t('equipment.form.weight')} error={touched ? errors.weight : undefined}>
+            <TextInput type="number" min="0" value={form.weight} onChange={(e) => setField('weight', e.target.value)} placeholder="18" />
+          </FormField>
+          <FormField label={t('equipment.form.energyConsumption')} error={touched ? errors.energy_consumption : undefined}>
+            <TextInput type="number" min="0" value={form.energy_consumption} onChange={(e) => setField('energy_consumption', e.target.value)} placeholder="650" />
+          </FormField>
+          <FormField label={t('equipment.form.rackUnitSize')} error={touched ? errors.rack_unit_size : undefined}>
+            <TextInput type="number" min="1" value={form.rack_unit_size} onChange={(e) => setField('rack_unit_size', e.target.value)} placeholder="1" />
           </FormField>
         </div>
 

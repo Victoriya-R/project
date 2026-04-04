@@ -39,7 +39,14 @@ export interface EquipmentDetails extends Equipment {
 export interface UpsEntity {
   id: number;
   name: string;
+  type?: 'ups';
+  model?: string;
+  serial?: string;
   status: EntityStatus;
+  weight?: number;
+  energy_consumption?: number;
+  rack_unit_size?: number;
+  unit_size?: number;
   upsData: {
     ups_id?: number;
     capacity: number;

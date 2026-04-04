@@ -46,6 +46,11 @@ export function EquipmentPage() {
   });
   const cabinets = useApiQuery({ queryKey: ['cabinet-list'], queryFn: switchCabinetsApi.list });
   const zones = useApiQuery({ queryKey: ['zone-list'], queryFn: zonesApi.list });
+  const toOptionalNumber = (value: unknown) => {
+    if (value === undefined || value === null) return undefined;
+    const normalized = Number(value);
+    return Number.isFinite(normalized) ? normalized : undefined;
+  };
 
   const invalidateEquipmentData = async () => {
     await Promise.all([
@@ -63,6 +68,11 @@ export function EquipmentPage() {
         return upsApi.create({
           name: payload.name,
           status: payload.status,
+          model: payload.model || undefined,
+          serial: payload.serial || undefined,
+          weight: toOptionalNumber(payload.weight),
+          energy_consumption: toOptionalNumber(payload.energy_consumption),
+          rack_unit_size: toOptionalNumber(payload.rack_unit_size),
           upsData: {
             capacity: Number(payload.ups_capacity),
             battery_life: Number(payload.ups_battery_life),
@@ -77,6 +87,9 @@ export function EquipmentPage() {
         model: payload.model,
         serial: payload.serial,
         status: payload.status,
+        weight: toOptionalNumber(payload.weight),
+        energy_consumption: toOptionalNumber(payload.energy_consumption),
+        rack_unit_size: toOptionalNumber(payload.rack_unit_size),
         serverData: payload.type === 'server' ? {
           ip_address: payload.server_ip_address,
           memory_slots: Number(payload.server_memory_slots),
@@ -108,6 +121,9 @@ export function EquipmentPage() {
         return upsApi.update(selectedEquipment.id, {
           name: payload.name,
           status: payload.status,
+          weight: toOptionalNumber(payload.weight),
+          energy_consumption: toOptionalNumber(payload.energy_consumption),
+          rack_unit_size: toOptionalNumber(payload.rack_unit_size),
           upsData: {
             capacity: Number(payload.ups_capacity),
             battery_life: Number(payload.ups_battery_life),
@@ -118,7 +134,9 @@ export function EquipmentPage() {
 
       return equipmentApi.update(selectedEquipment.id, {
         name: payload.name,
-        status: payload.status
+        status: payload.status,
+        weight: toOptionalNumber(payload.weight),
+        energy_consumption: toOptionalNumber(payload.energy_consumption)
       });
     },
     onSuccess: async () => {

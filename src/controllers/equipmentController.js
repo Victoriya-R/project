@@ -3,6 +3,31 @@ import logger from '../utils/logger.js';  // Логирование
 import { evaluateRackAlertsSafe } from '../services/rackAlertsService.js';
 
 const getOwnerUserId = (req) => Number(req.user?.userId);
+const parseOptionalPositiveNumber = (value, fieldName) => {
+  if (value === undefined) {
+    return { hasValue: false, value: undefined };
+  }
+
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized) || normalized < 0) {
+    return { error: `${fieldName} должен быть числом >= 0` };
+  }
+
+  return { hasValue: true, value: normalized };
+};
+
+const parseOptionalPositiveInteger = (value, fieldName) => {
+  if (value === undefined) {
+    return { hasValue: false, value: undefined };
+  }
+
+  const normalized = Number(value);
+  if (!Number.isInteger(normalized) || normalized <= 0) {
+    return { error: `${fieldName} должен быть целым числом > 0` };
+  }
+
+  return { hasValue: true, value: normalized };
+};
 
 // Создание новой зоны с дополнительными полями
 export const createZone = async (req, res) => {
@@ -1212,7 +1237,19 @@ const findPlacementConflict = async ({ switch_cabinet_id, ownerUserId, equipment
 
 // Создание оборудования (assets + типовые таблицы) с транзакцией
 export const createEquipment = async (req, res) => {
-  const { name, type, model, serial, status, serverData, patchPanelData } = req.body;
+  const {
+    name,
+    type,
+    model,
+    serial,
+    status,
+    weight,
+    energy_consumption,
+    rack_unit_size,
+    unit_size,
+    serverData,
+    patchPanelData
+  } = req.body;
 
   // Базовые обязательные поля
   const missingBaseFields = [];
@@ -1227,6 +1264,22 @@ export const createEquipment = async (req, res) => {
       error: 'Не заполнены обязательные поля',
       missing_fields: missingBaseFields
     });
+  }
+
+  const normalizedWeight = parseOptionalPositiveNumber(weight, 'weight');
+  if (normalizedWeight.error) {
+    return res.status(400).json({ error: normalizedWeight.error });
+  }
+
+  const normalizedEnergyConsumption = parseOptionalPositiveNumber(energy_consumption, 'energy_consumption');
+  if (normalizedEnergyConsumption.error) {
+    return res.status(400).json({ error: normalizedEnergyConsumption.error });
+  }
+
+  const effectiveUnitSize = rack_unit_size ?? unit_size;
+  const normalizedRackUnitSize = parseOptionalPositiveInteger(effectiveUnitSize, 'rack_unit_size');
+  if (normalizedRackUnitSize.error) {
+    return res.status(400).json({ error: normalizedRackUnitSize.error });
   }
 
   // Валидация типовых данных ДО вставки в assets
@@ -1301,9 +1354,24 @@ export const createEquipment = async (req, res) => {
     );
 
     const assetId = await new Promise((resolve, reject) => {
-      const q = `INSERT INTO assets (name, type, model, serial, status, owner_user_id) VALUES (?, ?, ?, ?, ?, ?)`;
+      const q = `INSERT INTO assets (
+        name, type, model, serial, status, weight, energy_consumption, rack_unit_size, owner_user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       const ownerUserId = getOwnerUserId(req);
-      db.run(q, [name, type, model, serial, status, ownerUserId], function (err) {
+      db.run(
+        q,
+        [
+          name,
+          type,
+          model,
+          serial,
+          status,
+          normalizedWeight.hasValue ? normalizedWeight.value : null,
+          normalizedEnergyConsumption.hasValue ? normalizedEnergyConsumption.value : null,
+          normalizedRackUnitSize.hasValue ? normalizedRackUnitSize.value : null,
+          ownerUserId
+        ],
+        function (err) {
         if (err) return reject(err);
         resolve(this.lastID);
       });
@@ -1443,16 +1511,59 @@ export const getEquipmentByStatus = async (req, res) => {
 
 export const updateEquipment = async (req, res) => {
   const { id } = req.params;
-  const { name, status } = req.body;
+  const { name, status, weight, energy_consumption } = req.body;
 
-  if (!name || !status) {
-    return res.status(400).json({ error: 'name и status обязательны' });
+  if (
+    name === undefined &&
+    status === undefined &&
+    weight === undefined &&
+    energy_consumption === undefined
+  ) {
+    return res.status(400).json({ error: 'Нужно передать хотя бы одно поле для обновления' });
   }
 
   try {
-    const query = `UPDATE assets SET name = ?, status = ? WHERE id = ? AND owner_user_id = ?`;
+    const fields = [];
+    const values = [];
+
+    if (name !== undefined) {
+      fields.push('name = ?');
+      values.push(name);
+    }
+
+    if (status !== undefined) {
+      fields.push('status = ?');
+      values.push(status);
+    }
+
+    const normalizedWeight = parseOptionalPositiveNumber(weight, 'weight');
+    if (normalizedWeight.error) {
+      return res.status(400).json({ error: normalizedWeight.error });
+    }
+    if (normalizedWeight.hasValue) {
+      fields.push('weight = ?');
+      values.push(normalizedWeight.value);
+    }
+
+    const normalizedEnergyConsumption = parseOptionalPositiveNumber(energy_consumption, 'energy_consumption');
+    if (normalizedEnergyConsumption.error) {
+      return res.status(400).json({ error: normalizedEnergyConsumption.error });
+    }
+    if (normalizedEnergyConsumption.hasValue) {
+      fields.push('energy_consumption = ?');
+      values.push(normalizedEnergyConsumption.value);
+    }
+
+    const ownerUserId = getOwnerUserId(req);
+    const currentEquipment = await getEquipmentRowById(id, ownerUserId);
+    if (!currentEquipment) {
+      return res.status(404).json({ error: 'Оборудование не найдено' });
+    }
+
+    const query = `UPDATE assets SET ${fields.join(', ')} WHERE id = ? AND owner_user_id = ?`;
+    values.push(id, ownerUserId);
     const result = await new Promise((resolve, reject) => {
-      db.run(query, [name, status, id, getOwnerUserId(req)], function (err) {
+      db.run(query, values, function (err) {
         if (err) return reject(err);
         resolve(this.changes);
       });
@@ -1463,6 +1574,10 @@ export const updateEquipment = async (req, res) => {
     }
 
     logger.info(`Success: Equipment with ID: ${id} updated`);
+    if (currentEquipment.switch_cabinet_id !== null && currentEquipment.switch_cabinet_id !== undefined) {
+      await evaluateRackAlertsSafe(currentEquipment.switch_cabinet_id, ownerUserId);
+    }
+
     return res.status(200).json({ message: 'Оборудование успешно обновлено' });
   } catch (error) {
     logger.error(`Error: Failed to update equipment. Error: ${error.message}`);
@@ -1495,7 +1610,7 @@ export const deleteEquipment = (req, res) => {
 
 //Создание UPS
 export const createUps = async (req, res) => {
-  const { name, status, upsData } = req.body;
+  const { name, status, model, serial, weight, energy_consumption, rack_unit_size, unit_size, upsData } = req.body;
 
   if (!name || !status || !upsData) {
     return res.status(400).json({ error: 'Все обязательные поля должны быть заполнены' });
@@ -1507,17 +1622,47 @@ export const createUps = async (req, res) => {
   }
 
   try {
-    const model = 'UPS';
-    const serial = `UPS-${Date.now()}`; // уникальный серийный номер
+    const normalizedWeight = parseOptionalPositiveNumber(weight, 'weight');
+    if (normalizedWeight.error) {
+      return res.status(400).json({ error: normalizedWeight.error });
+    }
+
+    const normalizedEnergyConsumption = parseOptionalPositiveNumber(energy_consumption, 'energy_consumption');
+    if (normalizedEnergyConsumption.error) {
+      return res.status(400).json({ error: normalizedEnergyConsumption.error });
+    }
+
+    const normalizedRackUnitSize = parseOptionalPositiveInteger(rack_unit_size ?? unit_size, 'rack_unit_size');
+    if (normalizedRackUnitSize.error) {
+      return res.status(400).json({ error: normalizedRackUnitSize.error });
+    }
+
+    const normalizedModel = model || 'UPS';
+    const normalizedSerial = serial || `UPS-${Date.now()}`; // уникальный серийный номер
 
     // Начинаем транзакцию
     await new Promise((resolve, reject) => db.run('BEGIN TRANSACTION', (e) => e ? reject(e) : resolve()));
 
     // Добавляем ИБП в таблицу assets
-    const query = `INSERT INTO assets (name, type, model, serial, status, owner_user_id) VALUES (?, ?, ?, ?, ?, ?)`;
+    const query = `INSERT INTO assets (
+      name, type, model, serial, status, weight, energy_consumption, rack_unit_size, owner_user_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     const ownerUserId = getOwnerUserId(req);
     const result = await new Promise((resolve, reject) => {
-      db.run(query, [name, 'ups', model, serial, status, ownerUserId], function (err) {
+      db.run(
+        query,
+        [
+          name,
+          'ups',
+          normalizedModel,
+          normalizedSerial,
+          status,
+          normalizedWeight.hasValue ? normalizedWeight.value : null,
+          normalizedEnergyConsumption.hasValue ? normalizedEnergyConsumption.value : null,
+          normalizedRackUnitSize.hasValue ? normalizedRackUnitSize.value : null,
+          ownerUserId
+        ],
+        function (err) {
         if (err) return reject(err);
         resolve(this.lastID);
       });
@@ -1553,7 +1698,7 @@ export const createUps = async (req, res) => {
 
 //Получение портов ИБП
 export const getPortsForUps = async (req, res) => {
-  const { equipment_id } = req.query;
+  const equipment_id = req.params.id ?? req.query.equipment_id;
 
   if (!equipment_id) {
     return res.status(400).json({ error: 'Не указан equipment_id' });
@@ -1628,6 +1773,7 @@ export const getUpsById = async (req, res) => {
   const query = `
     SELECT 
       a.id as asset_id, a.name, a.type, a.model, a.serial, a.status as asset_status,
+      a.weight, a.energy_consumption, COALESCE(a.rack_unit_size, 1) as rack_unit_size,
       u.id as ups_id, u.capacity, u.battery_life, u.status as ups_status
     FROM assets a
     JOIN ups u ON u.asset_id = a.id
@@ -1641,7 +1787,12 @@ export const getUpsById = async (req, res) => {
     return res.status(200).json({
       id: row.asset_id,
       name: row.name,
+      model: row.model,
+      serial: row.serial,
       status: row.asset_status,
+      weight: row.weight,
+      energy_consumption: row.energy_consumption,
+      rack_unit_size: row.rack_unit_size,
       upsData: {
         ups_id: row.ups_id,
         capacity: row.capacity,
@@ -1654,47 +1805,119 @@ export const getUpsById = async (req, res) => {
 
 export const updateUps = async (req, res) => {
   const { id } = req.params; // asset_id
-  const { name, status, upsData } = req.body;
+  const { name, status, weight, energy_consumption, rack_unit_size, unit_size, upsData } = req.body;
 
-  if (!name || !status || !upsData) {
-    return res.status(400).json({ error: 'name, status и upsData обязательны' });
-  }
-  const { capacity, battery_life } = upsData;
-  if (capacity === undefined || battery_life === undefined) {
-    return res.status(400).json({ error: 'upsData.capacity и upsData.battery_life обязательны' });
+  if (
+    name === undefined &&
+    status === undefined &&
+    weight === undefined &&
+    energy_consumption === undefined &&
+    rack_unit_size === undefined &&
+    unit_size === undefined &&
+    upsData === undefined
+  ) {
+    return res.status(400).json({ error: 'Нужно передать хотя бы одно поле для обновления UPS' });
   }
 
   try {
     await new Promise((resolve, reject) => db.run('BEGIN TRANSACTION', (e) => e ? reject(e) : resolve()));
 
-    const aChanges = await new Promise((resolve, reject) => {
-      db.run(
-        `UPDATE assets SET name = ?, status = ? WHERE id = ? AND type = 'ups' AND owner_user_id = ?`,
-        [name, status, id, getOwnerUserId(req)],
-        function (err) {
-          if (err) return reject(err);
-          resolve(this.changes);
-        }
-      );
-    });
+    const ownerUserId = getOwnerUserId(req);
+    const currentEquipment = await getEquipmentRowById(id, ownerUserId);
+    if (!currentEquipment || currentEquipment.type !== 'ups') {
+      await new Promise((resolve) => db.run('ROLLBACK', () => resolve()));
+      return res.status(404).json({ error: 'UPS not found' });
+    }
+
+    const normalizedWeight = parseOptionalPositiveNumber(weight, 'weight');
+    if (normalizedWeight.error) {
+      await new Promise((resolve) => db.run('ROLLBACK', () => resolve()));
+      return res.status(400).json({ error: normalizedWeight.error });
+    }
+
+    const normalizedEnergyConsumption = parseOptionalPositiveNumber(energy_consumption, 'energy_consumption');
+    if (normalizedEnergyConsumption.error) {
+      await new Promise((resolve) => db.run('ROLLBACK', () => resolve()));
+      return res.status(400).json({ error: normalizedEnergyConsumption.error });
+    }
+
+    const normalizedRackUnitSize = parseOptionalPositiveInteger(rack_unit_size ?? unit_size, 'rack_unit_size');
+    if (normalizedRackUnitSize.error) {
+      await new Promise((resolve) => db.run('ROLLBACK', () => resolve()));
+      return res.status(400).json({ error: normalizedRackUnitSize.error });
+    }
+
+    const assetFields = [];
+    const assetValues = [];
+
+    if (name !== undefined) {
+      assetFields.push('name = ?');
+      assetValues.push(name);
+    }
+    if (status !== undefined) {
+      assetFields.push('status = ?');
+      assetValues.push(status);
+    }
+    if (normalizedWeight.hasValue) {
+      assetFields.push('weight = ?');
+      assetValues.push(normalizedWeight.value);
+    }
+    if (normalizedEnergyConsumption.hasValue) {
+      assetFields.push('energy_consumption = ?');
+      assetValues.push(normalizedEnergyConsumption.value);
+    }
+    if (normalizedRackUnitSize.hasValue) {
+      assetFields.push('rack_unit_size = ?');
+      assetValues.push(normalizedRackUnitSize.value);
+    }
+
+    let aChanges = 1;
+    if (assetFields.length) {
+      aChanges = await new Promise((resolve, reject) => {
+        db.run(
+          `UPDATE assets SET ${assetFields.join(', ')} WHERE id = ? AND type = 'ups' AND owner_user_id = ?`,
+          [...assetValues, id, ownerUserId],
+          function (err) {
+            if (err) return reject(err);
+            resolve(this.changes);
+          }
+        );
+      });
+    }
 
     if (aChanges === 0) {
       await new Promise((resolve) => db.run('ROLLBACK', () => resolve()));
       return res.status(404).json({ error: 'UPS not found' });
     }
 
-    await new Promise((resolve, reject) => {
-      db.run(
-        `UPDATE ups SET capacity = ?, battery_life = ?, status = ? WHERE asset_id = ?`,
-        [capacity, battery_life, status, id],
-        function (err) {
-          if (err) return reject(err);
-          resolve(this.changes);
-        }
-      );
-    });
+    if (upsData !== undefined) {
+      const { capacity, battery_life } = upsData;
+      if (capacity === undefined || battery_life === undefined) {
+        await new Promise((resolve) => db.run('ROLLBACK', () => resolve()));
+        return res.status(400).json({ error: 'upsData.capacity и upsData.battery_life обязательны' });
+      }
+
+      const upsStatus = status !== undefined ? status : currentEquipment.status;
+      await new Promise((resolve, reject) => {
+        db.run(
+          `UPDATE ups SET capacity = ?, battery_life = ?, status = ? WHERE asset_id = ?`,
+          [capacity, battery_life, upsStatus, id],
+          function (err) {
+            if (err) return reject(err);
+            resolve(this.changes);
+          }
+        );
+      });
+    } else if (status !== undefined) {
+      await new Promise((resolve, reject) => {
+        db.run(`UPDATE ups SET status = ? WHERE asset_id = ?`, [status, id], (err) => (err ? reject(err) : resolve()));
+      });
+    }
 
     await new Promise((resolve, reject) => db.run('COMMIT', (e) => e ? reject(e) : resolve()));
+    if (currentEquipment.switch_cabinet_id !== null && currentEquipment.switch_cabinet_id !== undefined) {
+      await evaluateRackAlertsSafe(currentEquipment.switch_cabinet_id, ownerUserId);
+    }
 
     return res.status(200).json({ message: 'UPS updated', id: Number(id) });
 

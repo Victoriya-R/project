@@ -1,12 +1,17 @@
+import path from 'path';
 import sqlite3 from 'sqlite3';
 import bcrypt from 'bcryptjs';
 
 const { Database } = sqlite3;
-const db = new Database('database.db', (err) => {
+const dbPath = process.env.SQLITE_PATH
+  ? path.resolve(process.env.SQLITE_PATH)
+  : path.resolve(process.cwd(), 'database.db');
+
+const db = new Database(dbPath, (err) => {
   if (err) {
     console.error('Error opening database', err);
   } else {
-    console.log('Connected to the SQLite database.');
+    console.log(`Connected to the SQLite database at ${dbPath}.`);
   }
 });
 

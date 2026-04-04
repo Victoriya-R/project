@@ -15,6 +15,7 @@ services:
     environment:
       NODE_ENV: development
       FRONTEND_ORIGIN: http://localhost:8080
+      SQLITE_PATH: /usr/src/app/database.db
     depends_on:
       kafka:
         condition: service_healthy
@@ -30,7 +31,9 @@ services:
       - backend_network
     volumes:
       - .:/usr/src/app
-      - db_data:/var/lib/postgresql/data  # Volume для базы данных
+      - app_node_modules:/usr/src/app/node_modules
+      - frontend_node_modules:/usr/src/app/frontend/node_modules
+      - ./database.db:/usr/src/app/database.db
 
   zookeeper:
     image: wurstmeister/zookeeper:latest
@@ -105,4 +108,5 @@ networks:
     driver: bridge
 
 volumes:
-  db_data:
+  app_node_modules:
+  frontend_node_modules:

@@ -62,6 +62,9 @@ export interface SwitchCabinet {
   weight: number;
   energy_consumption: number;
   energy_limit: number;
+  current_weight?: number;
+  current_energy_consumption?: number;
+  equipment_count?: number;
   employee?: string;
   zone_id?: number | null;
   description?: string;

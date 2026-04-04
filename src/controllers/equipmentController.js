@@ -736,7 +736,20 @@ export const createSwitchCabinet = async (req, res) => {
 // Получение всех стоек
 export const getAllSwitchCabinets = async (req, res) => {
   const ownerUserId = getOwnerUserId(req);
-  const query = `SELECT * FROM switch_cabinets WHERE owner_user_id = ?`;
+  const query = `
+    SELECT
+      sc.*,
+      COALESCE(COUNT(a.id), 0) AS equipment_count,
+      COALESCE(SUM(COALESCE(a.weight, 0)), 0) AS current_weight,
+      COALESCE(SUM(COALESCE(a.energy_consumption, 0)), 0) AS current_energy_consumption
+    FROM switch_cabinets sc
+    LEFT JOIN assets a
+      ON a.switch_cabinet_id = sc.id
+     AND a.owner_user_id = sc.owner_user_id
+    WHERE sc.owner_user_id = ?
+    GROUP BY sc.id
+    ORDER BY sc.id
+  `;
 
   try {
     const rows = await new Promise((resolve, reject) => {
@@ -925,9 +938,15 @@ export const getSwitchCabinet = async (req, res) => {
     });
 
     // 3) ответ
+    const currentWeight = (equipment ?? []).reduce((sum, item) => sum + Number(item.weight ?? 0), 0);
+    const currentEnergyConsumption = (equipment ?? []).reduce((sum, item) => sum + Number(item.energy_consumption ?? 0), 0);
+
     return res.status(200).json({
       ...cabinet,
-      equipment: equipment ?? [] // лучше [] чем null
+      equipment: equipment ?? [], // лучше [] чем null
+      equipment_count: (equipment ?? []).length,
+      current_weight: currentWeight,
+      current_energy_consumption: currentEnergyConsumption
     });
 
   } catch (error) {
